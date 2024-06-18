@@ -1,3 +1,7 @@
+# nextjs mongodb
+inspired by https://medium.com/@technorahmon/building-a-robust-repository-layer-with-next-js-14-and-mongodb-a-comprehensive-guide-153de0b6b334
+
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
