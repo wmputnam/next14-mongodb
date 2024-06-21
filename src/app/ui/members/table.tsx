@@ -3,13 +3,12 @@
 // import InvoiceStatus from '@/app/ui/members/status';
 import { formatDateToLocal } from '@/app/lib/utils';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
-import { MemberDocumentService } from '@/Server/Service/MemberDocumentService/MemberDocumentService';
 import { fetchMembers } from '@/Server/actions/MemberDocumentActions';
 import React from 'react';
 
 /**
  * @function MembersTable
- * @description React component with me
+ * @description React component with member table and _RUD
  */
 /**
  * 
@@ -21,23 +20,36 @@ import React from 'react';
  * @returns React.JSX table of member docs
  */
 export async function MembersTable({
-  query = { isActive: true },
+  filter = { isActive: true },
   currentPage = 1,
   limit = 10,
-  projection = {},
+  projection = {
+    _id: 1,
+    lastName: 1,
+    firstName: 1,
+    email: 1,
+    phone: 1,
+    mmb: 1,
+    paidThrough: 1,
+  },
+  sort = {
+    lastName: 1,
+    firstName: 1
+  }
 }: {
-  query?: Partial<IMemberDocument>;
+  filter?: Partial<IMemberDocument>;
   currentPage?: number;
   limit?: number;
   projection?: Object;
+  sort: any;
 }) {
-  const memberDocumentService = new MemberDocumentService();
+
   const memberDocuments = await fetchMembers(
     currentPage,
     limit,
-    { isActive: true },
+    filter,
     projection,
-    { lastName: 1, firstName: 1 });
+    sort);
 
   const transformMmb = (mmb: string) => {
     if (mmb === 'BEN')
@@ -58,7 +70,7 @@ export async function MembersTable({
     } else {
       return "";
     }
-    // formatDateToLocal(member.paidThrough.toISOString())}
+
   }
   return (
     <div className="mt-6 flow-root">
@@ -73,26 +85,12 @@ export async function MembersTable({
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
                     <div className="mb-2 flex items-center">
-                      {/* <Image
-                        src={member.image_url}
-                        className="mr-2 rounded-full"
-                        width={28}
-                        height={28}
-                        alt={`${member.name}'s profile picture`}
-                      /> */}
                       <p>{member.lastName}, {member.firstName}</p>
                     </div>
                     <p className="text-sm text-gray-500">{member.email}</p>
                   </div>
-                  {/* <InvoiceStatus status={member.status} /> */}
                 </div>
                 <div className="flex w-full items-center justify-between pt-4">
-                  {/* <div>
-                    <p className="text-xl font-medium">
-                      {formatCurrency(member.amount)}
-                    </p>
-                    <p>{formatDateToLocal(member.date)}</p>
-                  </div> */}
                   <div className="flex justify-end gap-2">
                     {/* <UpdateInvoice id={member._id} />
                     <DeleteInvoice id={member._id} /> */}

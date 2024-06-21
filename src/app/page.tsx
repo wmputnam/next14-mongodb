@@ -1,8 +1,5 @@
 import React, { Suspense } from 'react';
-// import { BookCard } from '@/Client/Components/Home/BookCard';
-import { fetchMembers, fetchMembersPageCount } from '@/Server/actions/MemberDocumentActions';
-import { MemberCard } from '@/Client/Components/Home/MemberCard';
-// import { Pagination } from '@/Client/Components/Home/Pagination';
+import { fetchMembersPageCount } from '@/Server/actions/MemberDocumentActions';
 import { MembersTable } from '@/app//ui/members/table';
 import { Pagination } from '@/app//ui/members/pagination';
 
@@ -17,17 +14,16 @@ type HomeProps = {
 export default async function Home({
   searchParams
 }: HomeProps) {
+  const DOCS_PER_PAGE = 14;
+
+  const sortByName = () => ({ lastName: 1, firstName: 1 });
+
+  const filterActiveOnly = () => ({isActive:true});
   // get the current page number
   const { page } = searchParams as ISearchQuery;
   const pageNumber: number = page && !isNaN(Number(page)) ? Number(page) : 1;
-  // const ITEMS_PER_PAGE = 27;
 
-  /* begin:: fetch book list */
-  // const { data: members, totalCount } = await fetchMembers(pageNumber, ITEMS_PER_PAGE);
-  /* end:: fetch book list */
-
-  const totalPages = await fetchMembersPageCount(14);
-
+  const totalPages = await fetchMembersPageCount(DOCS_PER_PAGE);
 
   return (
     <div className="home-page w-full px-8 grow flex flex-col mt-2">
@@ -39,15 +35,16 @@ export default async function Home({
             <>
               <MembersTable
                 currentPage={pageNumber}
-                limit={14}
-
+                limit={DOCS_PER_PAGE}
+                filter = {filterActiveOnly()}
+                sort={sortByName()}
               />
               <Pagination
                 totalPages={totalPages}
               />
             </>
             :
-            <h4 className='text-center'>No books found</h4>
+            <h4 className='text-center'>No members found</h4>
           }
         </Suspense>
       </div>
