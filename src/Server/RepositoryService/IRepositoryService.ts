@@ -1,6 +1,6 @@
 interface IRepository<T> {
 
-  fetchFilteredData(
+  fetchDocumentsFiltered(
     filter: Partial<T>,
     page: number,
     limit: number,
@@ -8,7 +8,7 @@ interface IRepository<T> {
     projection?: Partial<Record<keyof T, 1 | 0>>,
   ): Promise<{ data: T[], totalCount: number }>;
 
-  fetchFilteredDataPageCount(
+  fetchDocumentFilteredPageCount(
     filter: Partial<T>,
     limit: number,
   ): Promise<number>

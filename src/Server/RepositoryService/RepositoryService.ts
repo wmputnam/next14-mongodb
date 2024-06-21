@@ -42,7 +42,7 @@ export class Repository<T> implements IRepository<T> {
   }
 
   /** 
-   * @async @function fetchFilteredData
+   * @async @function fetchDocumentsFiltered
    * @description find and return documents in the collection
    * @param [filter={}] -- Partial<T> MongoDB filter
    * @param [page=1] -- which page of results to return 
@@ -51,7 +51,7 @@ export class Repository<T> implements IRepository<T> {
    * @param [projection={}] -- which doc properties
    * @returns Promise { <data: T[], totalCount:number>} -- projected doc array (up to limit) and size of filtered set
    */
-  async fetchFilteredData(
+  async fetchDocumentsFiltered(
     filter: Partial<T> = {},
     page: number = 1,
     limit: number = 10,
@@ -145,7 +145,7 @@ export class Repository<T> implements IRepository<T> {
  * @returns Promise { number } -- pages of doc or NaN on error
  */
 
-  async fetchFilteredDataPageCount(
+  async fetchDocumentFilteredPageCount(
     filter: Partial<T>,
     limit: number = 10,
   ): Promise<number> {

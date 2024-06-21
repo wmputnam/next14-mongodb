@@ -13,6 +13,6 @@ export class BookService implements IBookService {
     page: number = 1,
     limit: number = 10
   ): Promise<{ data: IBook[], totalCount: number }> {
-    return this.repository.fetchFilteredData(filter, page, limit);
+    return this.repository.fetchDocumentsFiltered(filter, page, limit);
   }
 }

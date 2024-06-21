@@ -10,6 +10,17 @@ export class MemberDocumentService implements IMemberDocumentService {
   }
 
   /**
+   * @async @function createMemberDocument
+   * @param document -- IMemberDocument to create
+   * @returns documentId
+   */
+  async createMemberDocument(
+    document: Partial<IMemberDocument>
+  ) {
+    return this.repository.createDocument(document);
+  }
+
+  /**
   * @function findMemberDocuments
   * @async
   * @description find and return Member documents in the db
@@ -19,7 +30,7 @@ export class MemberDocumentService implements IMemberDocumentService {
   * @param [projection={}] -- which doc properties
   * @returns Promise { <data: T[], totalCount:number>} -- projected doc array (up to limit) and size of filtered set
   */
-  async findMemberDocuments(
+  async fetchMemberDocuments(
     filter: Partial<IMemberDocument>,
     page: number = 1,
     limit: number = 10,
@@ -28,7 +39,7 @@ export class MemberDocumentService implements IMemberDocumentService {
   ): Promise<{ data: IMemberDocument[], totalCount: number }> {
     // console.log(`findMemberDocuments: sort:${JSON.stringify(sort)}`);
 
-    return this.repository.fetchFilteredData(filter, page, limit, sort, projection);
+    return this.repository.fetchDocumentsFiltered(filter, page, limit, sort, projection);
   }
 
   /**
@@ -38,15 +49,15 @@ export class MemberDocumentService implements IMemberDocumentService {
    * @param [limit=10] -- max docs per page
    * @returns Promise { number } -- pages of doc or NaN on error
    */
-  async findMemberDocumentsPageCount(
+  async getMemberDocumentsPageCount(
     filter: Partial<IMemberDocument>,
     limit: number = 10,
   ): Promise<number> {
-    return this.repository.fetchFilteredDataPageCount(filter, limit);
+    return this.repository.fetchDocumentFilteredPageCount(filter, limit);
   }
 
   /**
-  * @function findMemberDocumentById
+  * @function fetchMemberDocumentById
   * @async
   * @description find and return Member documents in the db
   * @param [filter={}] -- Partial<T> MongoDB filter
@@ -55,15 +66,38 @@ export class MemberDocumentService implements IMemberDocumentService {
   * @param [projection={}] -- which doc properties
   * @returns Promise { <data: T[], totalCount:number>} -- projected doc array (up to limit) and size of filtered set
   */
-  async findMemberDocumentById(
-    documentId:string,
-    projection:any = {}
+  async fetchMemberDocumentById(
+    filter: any,
+    projection: any = {}
   ): Promise<IMemberDocument | undefined> {
     // console.log(`findMemberDocuments: sort:${JSON.stringify(sort)}`);
 
-    return this.repository.fetchDocumentById(documentId, projection);
+    return this.repository.fetchDocumentById(filter, projection);
   }
 
+  /**
+   * @async @function updateMemberDocument
+   * @param filter - mongoDB filter for selecting document (typ[ically the _id])
+   * @param updateDocument - object to set/unset document properties
+   * @returns document
+   */
+  async updateMemberDocument(
+    filter: any,
+    updateDocument: any
+  ) {
+    return this.repository.updateDocument(filter, updateDocument);
+  }
+
+  /**
+ * @async @function deleteMemberDocument
+ * @param filter - mongoDB filter for selecting document (typ[ically the _id])
+ * @returns count of documents deleted
+ */
+  async deleteMemberDocument(
+    filter: any,
+  ) {
+    return this.repository.deleteDocument(filter);
+  }
 
 };
 

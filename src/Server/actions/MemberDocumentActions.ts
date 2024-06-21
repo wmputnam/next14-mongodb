@@ -17,12 +17,12 @@ export const fetchMembers = async (
   itemsPerPage: number = 10,
   filter: Partial<IMemberDocument> = {},
   projection: Object = {},
-  sort:any = {}
+  sort: any = {}
 ) => {
   const memberDocumentService = new MemberDocumentService();
   // console.log(`fetchMembers: sort:${JSON.stringify(sort)}`);
 
-  return await memberDocumentService.findMemberDocuments(filter, pageNumber, itemsPerPage, sort,projection);
+  return await memberDocumentService.fetchMemberDocuments(filter, pageNumber, itemsPerPage, sort, projection);
 };
 
 /**
@@ -30,44 +30,54 @@ export const fetchMembers = async (
  * @description -- retrieve member documents page count as filtered
  * @param itemsPerPage -- max docs per page
  * @param filter -- mongoDB filter
- * @returns number of pages
+ * @returns Promise<number of pages>
  */
 export const fetchMembersPageCount = async (
   itemsPerPage: number = 10,
   filter: Partial<IMemberDocument> = { isActive: true },
 ) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.findMemberDocumentsPageCount(filter, itemsPerPage);
+  return await memberDocumentService.getMemberDocumentsPageCount(filter, itemsPerPage);
 }
 
 /**
  * @async @function createMember() 
+ * @param data -- member document to create
+ * @returns Promise<documentId>
  */
-export const createMember = async (data: Partial<IMemberDocument>) => { 
+export const createMember = async (data: Partial<IMemberDocument>) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.findMemberDocumentsPageCount(filter, itemsPerPage);
+  return await memberDocumentService.createMemberDocument(data);
 }
 
 /**
  * @async @function fetchMemberById(memberDocId: string) 
+ * @param filter -- mongodb filter to select memeber document (typically document _id)
+ * @param projection -- document properties to return
+ * @returns Promise<Partial<IMember>>
  */
-export const fetchMemberById = async (documentId:string, projection:any = {}) => { 
+export const fetchMemberById = async (filter:any, projection: any = {}) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.findMemberDocumentById(documentId,projection);
+  return await memberDocumentService.fetchMemberDocumentById(filter, projection);
 }
 
 /**
  * @async @function updateMemberById(memberDocId:string) 
+ * @param filter -- mongodb filter to select memeber document (typically document _id)
+ * @param data -- mongodb update document (set/unset)
+ * @returns Promise<IMember>
  */
-export const updateMemberById = async (memberDocId: string, data:Partial<IMemberDocument>) => {
+export const updateMemberById = async (filter:any, data: Partial<IMemberDocument>) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.findMemberDocumentsPageCount(filter, itemsPerPage);
+  return await memberDocumentService.updateMemberDocument(filter, data);
 }
 
 /**
  * @async @function deleteMemberById(memberDocId: string) 
+ * @param filter -- mongodb filter to select memeber document (typically document _id)
+ * @returns Promise<number of documents deleted>
  */
-export const deleteMemberById = async (memberDocId: string) => { 
+export const deleteMemberById = async (filter:any) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.findMemberDocumentsPageCount(filter, itemsPerPage);
+  return await memberDocumentService.deleteMemberDocument(filter);
 }

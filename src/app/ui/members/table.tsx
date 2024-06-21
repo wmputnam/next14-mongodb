@@ -9,9 +9,6 @@ import React from 'react';
 /**
  * @function MembersTable
  * @description React component with member table and _RUD
- */
-/**
- * 
  * @param params
  * @param params.query -- mongoDB filter [{isActive:true}]
  * @param params.currentPage <number> page set to display [1] 
@@ -51,6 +48,16 @@ export async function MembersTable({
     projection,
     sort);
 
+
+  const transformName = (lastName: string, firstName: string) => {
+    if (lastName && firstName) {
+      return `${toProperNameCase(lastName)}, ${toProperNameCase(firstName)}`
+    } else if (lastName) {
+      return `${toProperNameCase(lastName)}`
+    }
+    return "";
+  }
+
   const transformMmb = (mmb: string) => {
     if (mmb === 'BEN')
       return "LM"
@@ -70,8 +77,84 @@ export async function MembersTable({
     } else {
       return "";
     }
-
   }
+
+  const slicesGen = (wordIndices: number[], nonWordIndices: number[], length: number) => {
+    const result = Array<{ t: 'WORD' | 'OTHER', s: number, e: number }>();
+    if (length === 0) return result;
+
+    const tokensA = Array<{ typ: 'WORD' | 'OTHER', offset: number }>();
+    for (let i = 0; i < wordIndices.length; i++) {
+      tokensA[wordIndices[i]] = { typ: 'WORD', offset: wordIndices[i] };
+    }
+    for (let i = 0; i < nonWordIndices.length; i++) {
+      tokensA[nonWordIndices[i]] = { typ: 'OTHER', offset: nonWordIndices[i] }
+    }
+    console.log(`tokensA: ${JSON.stringify(tokensA)}`)
+
+    const tokensB = tokensA.filter((item) => item !== undefined);
+    console.log(`tokensB: ${JSON.stringify(tokensB)}`)
+
+    let startIdx = 0;
+    let endIdx: number = length;
+    let type: 'WORD' | 'OTHER' = 'WORD'
+
+    for (let i = 0; i < tokensB.length; i++) {
+      if (tokensB[i].offset === 0) {
+        type = tokensB[i].typ;
+        continue;
+      } else {
+        endIdx = tokensB[i].offset
+        result.push({ t: tokensB[i - 1].typ, s: startIdx, e: endIdx - 1 });
+        startIdx = tokensB[i].offset;
+        type = tokensB[i].typ;
+      }
+    }
+    // let startIdx:number = 0;// = Math.min(wordIndices[0], nonWordIndices[0]);
+    if (endIdx < length) {
+      result.push({ t: type, s: startIdx, e: length - 1 });
+    }
+    return result;
+  }
+
+  const toProperNameCase = (s: string) => {
+    const nonWordPat = /\W+/;
+    const nonWordPatGlobal = /\W+/g;
+    const wordPat = /\w+/;
+    const wordPatGlobal = /\w+/g;
+    const noCapWords = ['AND', 'OF', 'FAMILY'];
+
+    if (!nonWordPat.test(s)) {
+      return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
+    } else {
+      let result: string = '';
+      console.log(`"${s}" contains non-word characters`);
+      let wordIndices = Array.from(s.matchAll(wordPatGlobal)).map(x => x.index);
+      let nonWordIndices = Array.from(s.matchAll(nonWordPatGlobal)).map(x => x.index);
+      console.log(`wordIndices: ${wordIndices}`);
+      console.log(`nonWordIndices: ${nonWordIndices}`);
+      console.log(`length: ${s.length}`)
+      const slices = slicesGen(wordIndices, nonWordIndices, s.length);
+      console.log(`slices: ${JSON.stringify(slices)}`);
+      for (let i = 0; i < slices.length; i++) {
+        if (slices[i].t === 'WORD') {
+          if (!noCapWords.includes(s.slice(slices[i].s, slices[i].e + 1))) {
+            console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
+            result += toProperNameCase(s.slice(slices[i].s, slices[i].e + 1));
+          } else {
+            console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
+            result += s.slice(slices[i].s, slices[i].e + 1).toLowerCase();
+          }
+        } else {
+          console.log(`${i}: ${s.slice(slices[i].s, slices[i].e + 1)}`);
+          result += s.slice(slices[i].s, slices[i].e + 1);
+        }
+      }
+
+      return result;
+    }
+  }
+
   return (
     <div className="mt-6 flow-root">
       <div className="inline-block min-w-full align-middle">
@@ -85,7 +168,7 @@ export async function MembersTable({
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
                     <div className="mb-2 flex items-center">
-                      <p>{member.lastName}, {member.firstName}</p>
+                      <p>{transformName(member.lastName, member.firstName)}</p>
                     </div>
                     <p className="text-sm text-gray-500">{member.email}</p>
                   </div>
@@ -137,7 +220,7 @@ export async function MembersTable({
                         height={28}
                         alt={`${member.name}'s profile picture`}
                       /> */}
-                      <p>{member.lastName}, {member.firstName}</p>
+                      <p>{transformName(member.lastName, member.firstName)}</p>
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-3">
