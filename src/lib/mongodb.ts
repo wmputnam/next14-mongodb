@@ -2,6 +2,7 @@ import { MongoClient } from 'mongodb';
 
 // TODO: Replace with your MongoDB connection string
 const uri = process.env.MONGODB_URI as string;
+
 const options = {};
 
 declare global {
