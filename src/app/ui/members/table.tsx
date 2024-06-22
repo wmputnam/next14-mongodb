@@ -1,5 +1,5 @@
 // import Image from 'next/image';
-// import { UpdateInvoice, DeleteInvoice } from '@/app/ui/members/buttons';
+import { UpdateMemberDocument, DeleteMemberDocument } from '@/app/ui/members/buttons';
 // import InvoiceStatus from '@/app/ui/members/status';
 import { formatDateToLocal } from '@/app/lib/utils';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
@@ -90,10 +90,10 @@ export async function MembersTable({
     for (let i = 0; i < nonWordIndices.length; i++) {
       tokensA[nonWordIndices[i]] = { typ: 'OTHER', offset: nonWordIndices[i] }
     }
-    console.log(`tokensA: ${JSON.stringify(tokensA)}`)
+    // console.log(`tokensA: ${JSON.stringify(tokensA)}`)
 
     const tokensB = tokensA.filter((item) => item !== undefined);
-    console.log(`tokensB: ${JSON.stringify(tokensB)}`)
+    // console.log(`tokensB: ${JSON.stringify(tokensB)}`)
 
     let startIdx = 0;
     let endIdx: number = length;
@@ -128,25 +128,25 @@ export async function MembersTable({
       return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
     } else {
       let result: string = '';
-      console.log(`"${s}" contains non-word characters`);
+      // console.log(`"${s}" contains non-word characters`);
       let wordIndices = Array.from(s.matchAll(wordPatGlobal)).map(x => x.index);
       let nonWordIndices = Array.from(s.matchAll(nonWordPatGlobal)).map(x => x.index);
-      console.log(`wordIndices: ${wordIndices}`);
-      console.log(`nonWordIndices: ${nonWordIndices}`);
-      console.log(`length: ${s.length}`)
+      // console.log(`wordIndices: ${wordIndices}`);
+      // console.log(`nonWordIndices: ${nonWordIndices}`);
+      // console.log(`length: ${s.length}`)
       const slices = slicesGen(wordIndices, nonWordIndices, s.length);
-      console.log(`slices: ${JSON.stringify(slices)}`);
+      // console.log(`slices: ${JSON.stringify(slices)}`);
       for (let i = 0; i < slices.length; i++) {
         if (slices[i].t === 'WORD') {
           if (!noCapWords.includes(s.slice(slices[i].s, slices[i].e + 1))) {
-            console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
+            // console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
             result += toProperNameCase(s.slice(slices[i].s, slices[i].e + 1));
           } else {
-            console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
+            // console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
             result += s.slice(slices[i].s, slices[i].e + 1).toLowerCase();
           }
         } else {
-          console.log(`${i}: ${s.slice(slices[i].s, slices[i].e + 1)}`);
+          // console.log(`${i}: ${s.slice(slices[i].s, slices[i].e + 1)}`);
           result += s.slice(slices[i].s, slices[i].e + 1);
         }
       }
@@ -175,8 +175,8 @@ export async function MembersTable({
                 </div>
                 <div className="flex w-full items-center justify-between pt-4">
                   <div className="flex justify-end gap-2">
-                    {/* <UpdateInvoice id={member._id} />
-                    <DeleteInvoice id={member._id} /> */}
+                    <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
+                    <DeleteMemberDocument id={member._id ? member._id.toString() : ""} />
                   </div>
                 </div>
               </div>
@@ -239,8 +239,8 @@ export async function MembersTable({
                   </td>
                   <td className="whitespace-nowrap py-3 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
-                      {/* <UpdateInvoice id={member.id} /> */}
-                      {/* <DeleteInvoice id={member.id} /> */}
+                      <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
+                      <DeleteMemberDocument id={member._id ? member._id.toString() : ""} />
                     </div>
                   </td>
                 </tr>
