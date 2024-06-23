@@ -1,10 +1,10 @@
 // import Image from 'next/image';
 import { UpdateMemberDocument, DeleteMemberDocument } from '@/app/ui/members/buttons';
-// import InvoiceStatus from '@/app/ui/members/status';
 import { formatDateToLocal } from '@/app/lib/utils';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
 import { fetchMembers } from '@/Server/actions/MemberDocumentActions';
 import React from 'react';
+import clsx from 'clsx';
 
 /**
  * @function MembersTable
@@ -65,8 +65,8 @@ export async function MembersTable({
       return mmb;
   };
 
-  const transformPaidThrough = (mmb: string, paidThroughDate: Date) => {
-    if (!['LM', 'HLM', 'VOL', 'BEN'].includes(mmb)) {
+  const transformPaidThrough = (mmb: string | undefined, paidThroughDate: Date | undefined) => {
+    if (mmb && !['LM', 'HLM', 'VOL', 'BEN'].includes(mmb)) {
       if (paidThroughDate instanceof Date) {
         return formatDateToLocal(paidThroughDate.toISOString());
       } else if (typeof paidThroughDate === 'string') {
@@ -155,15 +155,69 @@ export async function MembersTable({
     }
   }
 
+  const paidCurrentFontStyle = (mmb: string | undefined, paidThrough: Date | undefined) => {
+    const now: Date = new Date(Date.now());
+    if (mmb) {
+      const today: Date = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      if (!['LM', 'VOL', 'HLM', 'BEN'].includes(mmb) &&
+        paidThrough &&
+        paidThrough && paidThrough >= today
+      ) {
+        return ' text-green-700 font-bold';
+      } else if (['LM', 'HLM', 'BEN'].includes(mmb)) {
+        return ' text-green-700 font-bold';
+      }
+      return '';
+    }
+  }
+
+  const isPaidCurrent = (mmb: string | undefined, paidThrough: Date | undefined) => {
+    const alwaysPaidCurrentMmb = ['LM', 'HLM', 'BEN']
+    const neverPaidCurrentMmb = ['VOL']
+    const now: Date = new Date(Date.now());
+    const today: Date = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    if (mmb) {
+      switch (mmb) {
+        case 'LM':
+        case 'HLM':
+        case 'BEN':
+          return true;
+        case 'VOL':
+          return false;
+        default:
+
+          if (
+            paidThrough &&
+            paidThrough && paidThrough >= today
+          ) {
+            return true;
+          } else {
+            return false;
+          }
+      }
+    }
+    return false;
+  }
+
+  const toolTipDefaultForIndex = (s: string, n: number) => {
+    return s + n;
+  }
+
+  const includeToolTip = (member: IMemberDocument) =>
+    member.mmb !== undefined &&
+    !['LM', 'VOL', 'HLM', 'BEN'].includes(member.mmb) &&
+    member.paidThrough !== undefined;
+
   return (
-    <div className="mt-6 flow-root">
+    <div className="mt-1 flow-root">
       <div className="inline-block min-w-full align-middle">
         <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
           <div className="md:hidden">
             {memberDocuments?.data.map((member) => (
               <div
                 className="mb-2 w-full rounded-md bg-white p-4"
-                key={"md:hidden" + member._id}
+                key={"md:hidden" + member._id?.toString()}
               >
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
@@ -183,7 +237,7 @@ export async function MembersTable({
             ))}
           </div>
           <table className="hidden min-w-full text-gray-900 md:table">
-            <thead className="rounded-lg text-left text-sm font-normal">
+            <thead className="rounded-lg bg-blue-100 text-left text-sm font-normal">
               <tr>
                 <th scope="col" className="px-4 py-5 font-medium sm:pl-6">
                   Member Name
@@ -197,21 +251,18 @@ export async function MembersTable({
                 <th scope="col" className="px-3 py-5 font-medium">
                   MMB
                 </th>
-                <th scope="col" className="px-3 py-5 font-medium">
-                  Paid Through
-                </th>
                 <th scope="col" className="relative py-3 pl-6 pr-3">
                   <span className="sr-only">Edit</span>
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white">
-              {memberDocuments?.data.map((member) => (
+              {memberDocuments?.data.map((member, index) => (
                 <tr
-                  className="w-full border-b py-3 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg"
-                  key={"tr-" + member._id}
+                  className={clsx("w-full border-b py-2 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg border-slate-600", isPaidCurrent(member.mmb, member.paidThrough) && "bg-green-200")}
+                  key={"tr-" + member._id?.toString()}
                 >
-                  <td className="whitespace-nowrap py-3 pl-6 pr-3">
+                  <td className="whitespace-nowrap py-2 pl-6 pr-3">
                     <div className="flex items-center gap-3">
                       {/* <Image
                         src={member.image_url}
@@ -223,21 +274,23 @@ export async function MembersTable({
                       <p>{transformName(member.lastName, member.firstName)}</p>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {member.email}
+                  <td className="whitespace-nowrap px-3 py-2">
+                    {member.email?.toLowerCase()}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-2">
                     {member.phone}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-2 has-tooltip" data-tooltip-target={toolTipDefaultForIndex("tooltip-default-", index)} data-tooltip-trigger="hover">
                     {member.mmb && transformMmb(member.mmb)}
-                    {/* <InvoiceStatus status={member.mmb} /> */}
+                    <div id={toolTipDefaultForIndex("tooltip-default-", index)} role="tooltip" className={clsx("tooltip text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm", includeToolTip(member) && "px-3 py-2")}>
+                      {/*  absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 dark:bg-gray-700 */}
+                      {console.log(`${member.lastName}, ${member.firstName}: "${member.mmb}",${isPaidCurrent(member.mmb, member.paidThrough)},${includeToolTip(member)}`) === undefined ? "" : ""}
+                      {
+                        includeToolTip(member) ? `paid through ${transformPaidThrough(member.mmb, member.paidThrough)}` : ''}
+                      <div className="tooltip-arrow" data-popper-arrow></div>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {
-                      member.mmb && member.paidThrough && transformPaidThrough(member.mmb, member.paidThrough)}
-                  </td>
-                  <td className="whitespace-nowrap py-3 pl-6 pr-3">
+                  <td className="whitespace-nowrap py-2 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
                       <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
                       <DeleteMemberDocument id={member._id ? member._id.toString() : ""} />

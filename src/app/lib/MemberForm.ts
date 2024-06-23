@@ -1,7 +1,7 @@
 import { IMemberDocument } from "@/Server/Service/MemberDocumentService";
-import { IMemberForm } from "./definitions";
+import { MemberForm } from "./definitions";
 
-export class MemberForm implements IMemberForm {
+export class MemberFormClass  {
   id: string;
   lastName: string;
   firstName: string;

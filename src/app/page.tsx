@@ -18,7 +18,7 @@ export default async function Home({
 
   const sortByName = () => ({ lastName: 1, firstName: 1 });
 
-  const filterActiveOnly = () => ({isActive:true});
+  const filterActiveOnly = () => ({ isActive: true });
   // get the current page number
   const { page } = searchParams as ISearchQuery;
   const pageNumber: number = page && !isNaN(Number(page)) ? Number(page) : 1;
@@ -36,7 +36,7 @@ export default async function Home({
               <MembersTable
                 currentPage={pageNumber}
                 limit={DOCS_PER_PAGE}
-                filter = {filterActiveOnly()}
+                filter={filterActiveOnly()}
                 sort={sortByName()}
               />
               <Pagination

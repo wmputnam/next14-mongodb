@@ -6,10 +6,7 @@ import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
 import { fetchMemberById } from '@/Server/actions/MemberDocumentActions';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
-import { MemberForm } from '@/app/lib/MemberForm';
-// import { type IMemberForm } from '@/app/lib/definitions';
-// import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
-// import { MemberForm } from '@/app/lib/MemberForm';
+import { MemberForm } from '@/app/lib/definitions';
 
 export const metadata: Metadata = {
   title: 'Invoice edit',
@@ -22,6 +19,20 @@ const transformIMemberDocumentToMemberForm = (m: IMemberDocument) => {
       id: id,
       lastName: m.lastName ? m.lastName : "",
       firstName: m.firstName ? m.firstName : "",
+      address: m.address ? m.address : "",
+      unit: m.unit ? m.unit : "",
+      city: m.city ? m.city : "",
+      state: m.state ? m.state : "",
+      postalCode: m.postalCode ? m.postalCode : "",
+      email: m.email ? m.email : "",
+      phone: m.phone ? m.phone : "",
+      mmb: m.mmb ? (m.mmb.slice(0, 3) === 'BEN' ? 'LM' : m.mmb) : "",
+      paidThrough: m.paidThrough ? m.paidThrough : undefined,
+      joined: m.joined ? m.joined : undefined,
+      newsLetterType: m.newsletterType ? m.newsletterType : "",
+      validEmail: m.validEmail ? m.validEmail : "",
+      validPostMail: m.validPostMail ? m.validPostMail : "",
+      lastUpdated: m.lastUpdated ? m.lastUpdated : undefined,
     } satisfies MemberForm
   } else {
     throw new Error('returned member document has no "_id"');

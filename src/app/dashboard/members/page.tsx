@@ -28,8 +28,8 @@ export default async function Home({
   return (
     <div className="home-page w-full px-8 grow flex flex-col mt-2">
       <hr className='w-full my-3 h-1 border-stone-400' />
-      <h2>Members:</h2>
-      <div className="mt-6 result-container">
+      <h2>Active Members and Volunteers:</h2>
+      <div className="mt-2 result-container">
         <Suspense fallback={<h6 className='text-center ltr'>📡 Loading data please wait ... </h6>}>
           {totalPages > 0 ?
             <>
