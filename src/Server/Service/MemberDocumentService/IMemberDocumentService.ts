@@ -1,6 +1,6 @@
 import { IMemberDocument } from "./IMemberDocument";
 export interface IMemberDocumentService {
-  findMemberDocuments(
+  fetchMemberDocuments(
     filter: Partial<IMemberDocument>,
     page: number,
     limit: number,

@@ -1,43 +1,81 @@
 // import Image from 'next/image';
-// import { UpdateInvoice, DeleteInvoice } from '@/app/ui/members/buttons';
-// import InvoiceStatus from '@/app/ui/members/status';
+import { UpdateMemberDocument, DeleteMemberDocument } from '@/app/ui/members/buttons';
 import { formatDateToLocal } from '@/app/lib/utils';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
-import { MemberDocumentService } from '@/Server/Service/MemberDocumentService/MemberDocumentService';
 import { fetchMembers } from '@/Server/actions/MemberDocumentActions';
 import React from 'react';
+import clsx from 'clsx';
 
 /**
  * @function MembersTable
- * @description React component with me
- */
-/**
- * 
+ * @description React component with member table and _RUD
  * @param params
- * @param params.query -- mongoDB filter [{isActive:true}]
+ * @param params.filter -- mongoDB filter [{isActive:true}]
  * @param params.currentPage <number> page set to display [1] 
  * @param params.limit <number> max docs per page  [10] 
  * @param params.projection -- mongodDB project for doc elements to return [{}]
+ * @param params.sort -- sort order for table [{lastName:1,firstName:1}]
+ * @param params.query -- string value to match in lastName
  * @returns React.JSX table of member docs
  */
 export async function MembersTable({
-  query = { isActive: true },
+  filter = { isActive: true },
   currentPage = 1,
   limit = 10,
-  projection = {},
+  projection = {
+    _id: 1,
+    lastName: 1,
+    firstName: 1,
+    email: 1,
+    phone: 1,
+    mmb: 1,
+    paidThrough: 1,
+  },
+  sort = {
+    lastName: 1,
+    firstName: 1
+  },
+  query = '',
 }: {
-  query?: Partial<IMemberDocument>;
+  filter?: any;
   currentPage?: number;
   limit?: number;
   projection?: Object;
+  sort: any;
+  query: string;
 }) {
-  const memberDocumentService = new MemberDocumentService();
+
+  let filterWithQuery;
+  // add query to filter if given
+  if (query === '') {
+    filterWithQuery = filter;
+  } else {
+    filterWithQuery = {
+      ...filter,
+      $or: [
+        { lastName: { $regex: `${query}`, $options: 'i' } },
+        { firstName: { $regex: `${query}`, $options: 'i' } },
+        { email: { $regex: `${query}`, $options: 'i' } },
+      ]
+    }
+  }
+
   const memberDocuments = await fetchMembers(
     currentPage,
     limit,
-    { isActive: true },
+    filterWithQuery,
     projection,
-    { lastName: 1, firstName: 1 });
+    sort);
+
+
+  const transformName = (lastName: string, firstName: string) => {
+    if (lastName && firstName) {
+      return `${toProperNameCase(lastName)}, ${toProperNameCase(firstName)}`
+    } else if (lastName) {
+      return `${toProperNameCase(lastName)}`
+    }
+    return "";
+  }
 
   const transformMmb = (mmb: string) => {
     if (mmb === 'BEN')
@@ -46,8 +84,8 @@ export async function MembersTable({
       return mmb;
   };
 
-  const transformPaidThrough = (mmb: string, paidThroughDate: Date) => {
-    if (!['LM', 'HLM', 'VOL', 'BEN'].includes(mmb)) {
+  const transformPaidThrough = (mmb: string | undefined, paidThroughDate: Date | undefined) => {
+    if (mmb && !['LM', 'HLM', 'VOL', 'BEN'].includes(mmb)) {
       if (paidThroughDate instanceof Date) {
         return formatDateToLocal(paidThroughDate.toISOString());
       } else if (typeof paidThroughDate === 'string') {
@@ -58,51 +96,156 @@ export async function MembersTable({
     } else {
       return "";
     }
-    // formatDateToLocal(member.paidThrough.toISOString())}
   }
+
+  const slicesGen = (wordIndices: number[], nonWordIndices: number[], length: number) => {
+    const result = Array<{ t: 'WORD' | 'OTHER', s: number, e: number }>();
+    if (length === 0) return result;
+
+    const tokensA = Array<{ typ: 'WORD' | 'OTHER', offset: number }>();
+    for (let i = 0; i < wordIndices.length; i++) {
+      tokensA[wordIndices[i]] = { typ: 'WORD', offset: wordIndices[i] };
+    }
+    for (let i = 0; i < nonWordIndices.length; i++) {
+      tokensA[nonWordIndices[i]] = { typ: 'OTHER', offset: nonWordIndices[i] }
+    }
+
+    const tokensB = tokensA.filter((item) => item !== undefined);
+
+    let startIdx = 0;
+    let endIdx: number = length;
+    let type: 'WORD' | 'OTHER' = 'WORD'
+
+    for (let i = 0; i < tokensB.length; i++) {
+      if (tokensB[i].offset === 0) {
+        type = tokensB[i].typ;
+        continue;
+      } else {
+        endIdx = tokensB[i].offset
+        result.push({ t: tokensB[i - 1].typ, s: startIdx, e: endIdx - 1 });
+        startIdx = tokensB[i].offset;
+        type = tokensB[i].typ;
+      }
+    }
+    if (endIdx < length) {
+      result.push({ t: type, s: startIdx, e: length - 1 });
+    }
+    return result;
+  }
+
+  const toProperNameCase = (s: string) => {
+    const nonWordPat = /\W+/;
+    const nonWordPatGlobal = /\W+/g;
+    const wordPat = /\w+/;
+    const wordPatGlobal = /\w+/g;
+    const noCapWords = ['AND', 'OF', 'FAMILY'];
+
+    if (!nonWordPat.test(s)) {
+      return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
+    } else {
+      let result: string = '';
+      let wordIndices = Array.from(s.matchAll(wordPatGlobal)).map(x => x.index);
+      let nonWordIndices = Array.from(s.matchAll(nonWordPatGlobal)).map(x => x.index);
+      const slices = slicesGen(wordIndices, nonWordIndices, s.length);
+      for (let i = 0; i < slices.length; i++) {
+        if (slices[i].t === 'WORD') {
+          if (!noCapWords.includes(s.slice(slices[i].s, slices[i].e + 1))) {
+            result += toProperNameCase(s.slice(slices[i].s, slices[i].e + 1));
+          } else {
+            result += s.slice(slices[i].s, slices[i].e + 1).toLowerCase();
+          }
+        } else {
+          result += s.slice(slices[i].s, slices[i].e + 1);
+        }
+      }
+
+      return result;
+    }
+  }
+
+  const paidCurrentFontStyle = (mmb: string | undefined, paidThrough: Date | undefined) => {
+    const now: Date = new Date(Date.now());
+    if (mmb) {
+      const today: Date = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+      if (!['LM', 'VOL', 'HLM', 'BEN'].includes(mmb) &&
+        paidThrough &&
+        paidThrough && paidThrough >= today
+      ) {
+        return ' text-green-700 font-bold';
+      } else if (['LM', 'HLM', 'BEN'].includes(mmb)) {
+        return ' text-green-700 font-bold';
+      }
+      return '';
+    }
+  }
+
+  const isPaidCurrent = (mmb: string | undefined, paidThrough: Date | undefined) => {
+    const alwaysPaidCurrentMmb = ['LM', 'HLM', 'BEN']
+    const neverPaidCurrentMmb = ['VOL']
+    const now: Date = new Date(Date.now());
+    const today: Date = new Date(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
+
+    if (mmb) {
+      switch (mmb) {
+        case 'LM':
+        case 'HLM':
+        case 'BEN':
+          return true;
+        case 'VOL':
+          return false;
+        default:
+
+          if (
+            paidThrough &&
+            paidThrough && paidThrough >= today
+          ) {
+            return true;
+          } else {
+            return false;
+          }
+      }
+    }
+    return false;
+  }
+
+  const toolTipDefaultForIndex = (s: string, n: number) => {
+    return s + n;
+  }
+
+  const includeToolTip = (member: IMemberDocument) =>
+    member.mmb !== undefined &&
+    !['LM', 'VOL', 'HLM', 'BEN'].includes(member.mmb) &&
+    member.paidThrough !== undefined;
+
   return (
-    <div className="mt-6 flow-root">
+    <div className="mt-1 flow-root">
       <div className="inline-block min-w-full align-middle">
         <div className="rounded-lg bg-gray-50 p-2 md:pt-0">
           <div className="md:hidden">
             {memberDocuments?.data.map((member) => (
               <div
                 className="mb-2 w-full rounded-md bg-white p-4"
-                key={"md:hidden" + member._id}
+                key={"md:hidden" + member._id?.toString()}
               >
                 <div className="flex items-center justify-between border-b pb-4">
                   <div>
                     <div className="mb-2 flex items-center">
-                      {/* <Image
-                        src={member.image_url}
-                        className="mr-2 rounded-full"
-                        width={28}
-                        height={28}
-                        alt={`${member.name}'s profile picture`}
-                      /> */}
-                      <p>{member.lastName}, {member.firstName}</p>
+                      <p>{transformName(member.lastName, member.firstName)}</p>
                     </div>
                     <p className="text-sm text-gray-500">{member.email}</p>
                   </div>
-                  {/* <InvoiceStatus status={member.status} /> */}
                 </div>
                 <div className="flex w-full items-center justify-between pt-4">
-                  {/* <div>
-                    <p className="text-xl font-medium">
-                      {formatCurrency(member.amount)}
-                    </p>
-                    <p>{formatDateToLocal(member.date)}</p>
-                  </div> */}
                   <div className="flex justify-end gap-2">
-                    {/* <UpdateInvoice id={member._id} />
-                    <DeleteInvoice id={member._id} /> */}
+                    <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
+                    <DeleteMemberDocument id={member._id ? member._id.toString() : ""} />
                   </div>
                 </div>
               </div>
             ))}
           </div>
           <table className="hidden min-w-full text-gray-900 md:table">
-            <thead className="rounded-lg text-left text-sm font-normal">
+            <thead className="rounded-lg bg-blue-100 text-left text-sm font-normal">
               <tr>
                 <th scope="col" className="px-4 py-5 font-medium sm:pl-6">
                   Member Name
@@ -116,21 +259,18 @@ export async function MembersTable({
                 <th scope="col" className="px-3 py-5 font-medium">
                   MMB
                 </th>
-                <th scope="col" className="px-3 py-5 font-medium">
-                  Paid Through
-                </th>
                 <th scope="col" className="relative py-3 pl-6 pr-3">
                   <span className="sr-only">Edit</span>
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white">
-              {memberDocuments?.data.map((member) => (
+              {memberDocuments?.data.map((member, index) => (
                 <tr
-                  className="w-full border-b py-3 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg"
-                  key={"tr-" + member._id}
+                  className={clsx("w-full border-b py-2 text-sm last-of-type:border-none [&:first-child>td:first-child]:rounded-tl-lg [&:first-child>td:last-child]:rounded-tr-lg [&:last-child>td:first-child]:rounded-bl-lg [&:last-child>td:last-child]:rounded-br-lg border-slate-600", isPaidCurrent(member.mmb, member.paidThrough) && "bg-green-200")}
+                  key={"tr-" + member._id?.toString()}
                 >
-                  <td className="whitespace-nowrap py-3 pl-6 pr-3">
+                  <td className="whitespace-nowrap py-2 pl-6 pr-3">
                     <div className="flex items-center gap-3">
                       {/* <Image
                         src={member.image_url}
@@ -139,27 +279,28 @@ export async function MembersTable({
                         height={28}
                         alt={`${member.name}'s profile picture`}
                       /> */}
-                      <p>{member.lastName}, {member.firstName}</p>
+                      <p>{transformName(member.lastName, member.firstName)}</p>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {member.email}
+                  <td className="whitespace-nowrap px-3 py-2">
+                    {member.email?.toLowerCase()}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-2">
                     {member.phone}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
+                  <td className="whitespace-nowrap px-3 py-2 has-tooltip" data-tooltip-target={toolTipDefaultForIndex("tooltip-default-", index)} data-tooltip-trigger="hover">
                     {member.mmb && transformMmb(member.mmb)}
-                    {/* <InvoiceStatus status={member.mmb} /> */}
+                    <div id={toolTipDefaultForIndex("tooltip-default-", index)} role="tooltip" className={clsx("tooltip text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm", includeToolTip(member) && "px-3 py-2")}>
+                      {/*  absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 dark:bg-gray-700 */}
+                      {
+                        includeToolTip(member) ? `paid through ${transformPaidThrough(member.mmb, member.paidThrough)}` : ''}
+                      <div className="tooltip-arrow" data-popper-arrow></div>
+                    </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-3">
-                    {
-                      member.mmb && member.paidThrough && transformPaidThrough(member.mmb, member.paidThrough)}
-                  </td>
-                  <td className="whitespace-nowrap py-3 pl-6 pr-3">
+                  <td className="whitespace-nowrap py-2 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
-                      {/* <UpdateInvoice id={member.id} /> */}
-                      {/* <DeleteInvoice id={member.id} /> */}
+                      <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
+                      <DeleteMemberDocument id={member._id ? member._id.toString() : ""} />
                     </div>
                   </td>
                 </tr>

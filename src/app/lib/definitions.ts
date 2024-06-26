@@ -86,3 +86,30 @@ export type InvoiceForm = {
   amount: number;
   status: 'pending' | 'paid';
 };
+
+export type MailingAddress = {
+  deliveryLocation: string[]; // 0-street address; 1-unit; 2-mail stop
+  city: string;
+  state: string;
+  postalCode: string;
+}
+
+export type MemberForm = {
+  id: string;
+  lastName: string;
+  firstName: string;
+  address: string;
+  unit: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  email: string;
+  phone: string;
+  mmb: string;
+  paidThrough: Date | undefined;
+  joined: Date | undefined;
+  newsletterType: string;
+  validEmail: string;
+  validPostMail: string;
+  lastUpdated: Date | undefined;
+};
