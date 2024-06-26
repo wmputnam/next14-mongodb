@@ -1,3 +1,6 @@
 {
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
   "extends": "next/core-web-vitals"
 }

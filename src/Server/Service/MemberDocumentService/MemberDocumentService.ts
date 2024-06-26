@@ -37,8 +37,6 @@ export class MemberDocumentService implements IMemberDocumentService {
     sort: any = { lastName: 1, firstName: 1 },
     projection: Partial<Record<keyof IMemberDocument, 1 | 0>> = {},
   ): Promise<{ data: IMemberDocument[], totalCount: number }> {
-    // console.log(`findMemberDocuments: sort:${JSON.stringify(sort)}`);
-
     return this.repository.fetchDocumentsFiltered(filter, page, limit, sort, projection);
   }
 
@@ -70,8 +68,6 @@ export class MemberDocumentService implements IMemberDocumentService {
     filter: any,
     projection: any = {}
   ): Promise<IMemberDocument | undefined> {
-    // console.log(`findMemberDocuments: sort:${JSON.stringify(sort)}`);
-
     return this.repository.fetchDocumentById(filter, projection);
   }
 
@@ -82,10 +78,11 @@ export class MemberDocumentService implements IMemberDocumentService {
    * @returns document
    */
   async updateMemberDocument(
-    filter: any,
+    documentId: string,
     updateDocument: any
   ) {
-    return this.repository.updateDocument(filter, updateDocument);
+    console.log(`updateMemberDocument filter`)
+    return this.repository.updateDocument(documentId, updateDocument);
   }
 
   /**

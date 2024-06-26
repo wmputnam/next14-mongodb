@@ -29,7 +29,7 @@ const transformIMemberDocumentToMemberForm = (m: IMemberDocument) => {
       mmb: m.mmb ? (m.mmb.slice(0, 3) === 'BEN' ? 'LM' : m.mmb) : "",
       paidThrough: m.paidThrough ? m.paidThrough : undefined,
       joined: m.joined ? m.joined : undefined,
-      newsLetterType: m.newsletterType ? m.newsletterType : "",
+      newsletterType: m.newsletterType ? m.newsletterType : "",
       validEmail: m.validEmail ? m.validEmail : "",
       validPostMail: m.validPostMail ? m.validPostMail : "",
       lastUpdated: m.lastUpdated ? m.lastUpdated : undefined,
@@ -41,8 +41,6 @@ const transformIMemberDocumentToMemberForm = (m: IMemberDocument) => {
 
 export default async function Page({ params }: { params: { id: string } }) {
   const id = params.id;
-
-  // console.log(`member edit page: id: ${params.id}`);
 
   const [memberObj] = await Promise.all([
     fetchMemberById(id),

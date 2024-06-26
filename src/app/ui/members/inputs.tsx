@@ -1,100 +1,4 @@
-export function FirstNameInput(params: any) {
-  return (
-    <div className="mb-4">
-      <label htmlFor="first-name" className="mb-2 block text-sm font-medium">
-      </label>
-      <div className="relative mt-2 rounded-md">
-        <div className="relative">
-          <input
-            id="first-name"
-            name="first-name"
-            type="text"
-            defaultValue={params.firstName}
-            placeholder="first name"
-            className="peer block w-full rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-            aria-describedby="first-name-error"
-          />
-          {/* <CurrencyDollarIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500 peer-focus:text-gray-900" /> */}
-        </div>
-        <div id="first-name-error" aria-live="polite" aria-atomic="true">
-          {params.state.errors?.firstName &&
-            params.state.errors.firstName.map((error: string) => (
-              <p className="mt-2 text-sm text-red-500" key={error}>
-                {error}
-              </p>
-            ))}
-        </div>
-      </div>
-    </div>
-  );
-
-}
-
-export function LastNameInput(params: any) {
-  return (
-    < div className="mb-4" >
-      <label htmlFor="last-name" className="mb-2 block text-sm font-medium">
-      </label>
-      <div className="relative">
-        <input
-          id="last-name"
-          name="last-name"
-          type="text"
-          className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          defaultValue={params.lastName}
-          placeholder='last name'
-          aria-describedby="last-name-error"
-        >
-        </input>
-        {/* <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" /> */}
-      </div>
-      <div id="last-name-error" aria-live="polite" aria-atomic="true">
-        {params.state.errors?.lastName &&
-          params.state.errors.lastName.map((error: string) => (
-            <p className="mt-2 text-sm text-red-500" key={error}>
-              {error}
-            </p>
-          ))}
-      </div>
-
-    </div >
-
-  );
-
-}
-
-export function AddressInput(params: any) {
-  return (
-    < div className="mb-4" >
-      <label htmlFor="address" className="mb-2 block text-sm font-medium">
-      </label>
-      <div className="relative">
-        <input
-          id="address"
-          name="address"
-          type="text"
-          className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          defaultValue={params.address}
-          placeholder='address'
-          aria-describedby="address-error"
-        >
-        </input>
-        {/* <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" /> */}
-      </div>
-      <div id="address-error" aria-live="polite" aria-atomic="true">
-        {params.state.errors?.address &&
-          params.state.errors.address.map((error: string) => (
-            <p className="mt-2 text-sm text-red-500" key={error}>
-              {error}
-            </p>
-          ))}
-      </div>
-
-    </div >
-
-  );
-
-}
+import clsx from "clsx";
 
 export function TextInput(params: any) {
   return (
@@ -111,10 +15,12 @@ export function TextInput(params: any) {
           type="text"
           disabled={params.disabled && params.disabled === true}
           readOnly={params.readOnly && params.readOnly === true}
-          className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
-          defaultValue={params.value}
-          placeholder={params.fieldName}
+          className={clsx("peer w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500", params.hidden === false && "block", params.hidden === true && "hidden")}
+          defaultValue={params.defaultValue}
+          placeholder={params.placeholder}
           aria-describedby={params.fieldName + "-error"}
+          required={params.required}
+          hidden={params.hidden}
         >
         </input>
         {/* <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" /> */}
@@ -148,8 +54,8 @@ const toDateString = (d: Date | string) => {
 }
 
 export function DateInput(params: any) {
-  const defaultValue = toDateString(params.value)
-  if (params.value)
+  const defaultValue = toDateString(params.defaultValue)
+  if (params.defaultValue)
     return (
       < div className="mb-4" >
         {params.label &&
@@ -162,12 +68,14 @@ export function DateInput(params: any) {
             id={params.fieldName}
             name={params.fieldName}
             type="date"
-            className="peer block w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500"
+            className={clsx("peer w-full cursor-pointer rounded-md border border-gray-200 py-2 pl-10 text-sm outline-2 placeholder:text-gray-500", params.hidden === false && "block", params.hidden === true && "hidden")}
             defaultValue={defaultValue}
             placeholder={params.fieldName}
             aria-describedby={params.fieldName + "-error"}
             disabled={params.disabled && params.disabled === true}
             readOnly={params.readOnly && params.readOnly === true}
+            required={params.required}
+            hidden={params.hidden}
           >
           </input>
           {/* <UserCircleIcon className="pointer-events-none absolute left-3 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-gray-500" /> */}
@@ -182,7 +90,6 @@ export function DateInput(params: any) {
         </div>
 
       </div >
-
     );
 
 }

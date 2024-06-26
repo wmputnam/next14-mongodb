@@ -10,10 +10,12 @@ import clsx from 'clsx';
  * @function MembersTable
  * @description React component with member table and _RUD
  * @param params
- * @param params.query -- mongoDB filter [{isActive:true}]
+ * @param params.filter -- mongoDB filter [{isActive:true}]
  * @param params.currentPage <number> page set to display [1] 
  * @param params.limit <number> max docs per page  [10] 
  * @param params.projection -- mongodDB project for doc elements to return [{}]
+ * @param params.sort -- sort order for table [{lastName:1,firstName:1}]
+ * @param params.query -- string value to match in lastName
  * @returns React.JSX table of member docs
  */
 export async function MembersTable({
@@ -32,19 +34,36 @@ export async function MembersTable({
   sort = {
     lastName: 1,
     firstName: 1
-  }
+  },
+  query = '',
 }: {
-  filter?: Partial<IMemberDocument>;
+  filter?: any;
   currentPage?: number;
   limit?: number;
   projection?: Object;
   sort: any;
+  query: string;
 }) {
+
+  let filterWithQuery;
+  // add query to filter if given
+  if (query === '') {
+    filterWithQuery = filter;
+  } else {
+    filterWithQuery = {
+      ...filter,
+      $or: [
+        { lastName: { $regex: `${query}`, $options: 'i' } },
+        { firstName: { $regex: `${query}`, $options: 'i' } },
+        { email: { $regex: `${query}`, $options: 'i' } },
+      ]
+    }
+  }
 
   const memberDocuments = await fetchMembers(
     currentPage,
     limit,
-    filter,
+    filterWithQuery,
     projection,
     sort);
 
@@ -90,10 +109,8 @@ export async function MembersTable({
     for (let i = 0; i < nonWordIndices.length; i++) {
       tokensA[nonWordIndices[i]] = { typ: 'OTHER', offset: nonWordIndices[i] }
     }
-    // console.log(`tokensA: ${JSON.stringify(tokensA)}`)
 
     const tokensB = tokensA.filter((item) => item !== undefined);
-    // console.log(`tokensB: ${JSON.stringify(tokensB)}`)
 
     let startIdx = 0;
     let endIdx: number = length;
@@ -110,7 +127,6 @@ export async function MembersTable({
         type = tokensB[i].typ;
       }
     }
-    // let startIdx:number = 0;// = Math.min(wordIndices[0], nonWordIndices[0]);
     if (endIdx < length) {
       result.push({ t: type, s: startIdx, e: length - 1 });
     }
@@ -128,25 +144,17 @@ export async function MembersTable({
       return s.slice(0, 1).toUpperCase() + s.slice(1).toLowerCase();
     } else {
       let result: string = '';
-      // console.log(`"${s}" contains non-word characters`);
       let wordIndices = Array.from(s.matchAll(wordPatGlobal)).map(x => x.index);
       let nonWordIndices = Array.from(s.matchAll(nonWordPatGlobal)).map(x => x.index);
-      // console.log(`wordIndices: ${wordIndices}`);
-      // console.log(`nonWordIndices: ${nonWordIndices}`);
-      // console.log(`length: ${s.length}`)
       const slices = slicesGen(wordIndices, nonWordIndices, s.length);
-      // console.log(`slices: ${JSON.stringify(slices)}`);
       for (let i = 0; i < slices.length; i++) {
         if (slices[i].t === 'WORD') {
           if (!noCapWords.includes(s.slice(slices[i].s, slices[i].e + 1))) {
-            // console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
             result += toProperNameCase(s.slice(slices[i].s, slices[i].e + 1));
           } else {
-            // console.log(`${i}: ${toProperNameCase(s.slice(slices[i].s, slices[i].e + 1))}`);
             result += s.slice(slices[i].s, slices[i].e + 1).toLowerCase();
           }
         } else {
-          // console.log(`${i}: ${s.slice(slices[i].s, slices[i].e + 1)}`);
           result += s.slice(slices[i].s, slices[i].e + 1);
         }
       }
@@ -284,7 +292,6 @@ export async function MembersTable({
                     {member.mmb && transformMmb(member.mmb)}
                     <div id={toolTipDefaultForIndex("tooltip-default-", index)} role="tooltip" className={clsx("tooltip text-sm font-medium text-white bg-gray-900 rounded-lg shadow-sm", includeToolTip(member) && "px-3 py-2")}>
                       {/*  absolute z-10 invisible inline-block px-3 py-2 text-sm font-medium text-white transition-opacity duration-300 bg-gray-900 rounded-lg shadow-sm opacity-0 dark:bg-gray-700 */}
-                      {console.log(`${member.lastName}, ${member.firstName}: "${member.mmb}",${isPaidCurrent(member.mmb, member.paidThrough)},${includeToolTip(member)}`) === undefined ? "" : ""}
                       {
                         includeToolTip(member) ? `paid through ${transformPaidThrough(member.mmb, member.paidThrough)}` : ''}
                       <div className="tooltip-arrow" data-popper-arrow></div>

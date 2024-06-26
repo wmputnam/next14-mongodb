@@ -71,7 +71,6 @@ export class Repository<T> implements IRepository<T> {
       // Get the total count of all items
       const totalCount = await collection.countDocuments(filter);
 
-      // console.log(`fetchFilteredData: sort:${JSON.stringify(sort)}`);
       // Access the database and the collection, then find documents matching the filter
       // If a projection is provided, apply it to the query
       // Convert the result to an array and return it
@@ -183,21 +182,26 @@ export class Repository<T> implements IRepository<T> {
    * @returns document
    */
   async updateDocument(
-    filter: any,
+    documentId: string,
     updateDocument: any
   ): Promise<T | undefined> {
     try {
       // Await the client promise to get an instance of MongoClient
       const client: MongoClient = await clientPromise;
 
+      const filter = { _id: new ObjectId(documentId) };
+      const setter = { $set: updateDocument }
+
+      console.log(`updateDocument filter: ${JSON.stringify(filter)}`);
+      console.log(`updateDocument setter: ${JSON.stringify(setter)}`);
       // Access the database and the collection
       const collection = client.db().collection(this.collection);
 
       const result = await collection
         .updateOne(
-          filter, updateDocument)
+          filter, setter)
         ;
-
+      console.log(`updateDocument result: ${JSON.stringify(result)}`);
       return result as unknown as T;
     } catch (error: unknown) {
       // Catch and log any connection errors
@@ -218,7 +222,7 @@ export class Repository<T> implements IRepository<T> {
    * @returns number of documents deleted
    */
   async deleteDocument(
-    filter: any,
+    documentId: string,
   ): Promise<number> {
     try {
       // Await the client promise to get an instance of MongoClient
@@ -226,6 +230,8 @@ export class Repository<T> implements IRepository<T> {
 
       // Access the database and the collection
       const collection = client.db().collection(this.collection);
+
+      const filter: any = { _id: new ObjectId(documentId) };
 
       const result = await collection
         .deleteOne(

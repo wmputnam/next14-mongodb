@@ -20,7 +20,6 @@ export default function Form({
 }: {
   member: MemberForm;
 }) {
-  console.log(`member edit form - member.id: "${member.id}"`)
   const initialState = { message: null, errors: {} };
   const updateMemberFormActionWithId = updateMemberFormAction.bind(null, member.id ? member.id : "");
   const [state, dispatch] = useFormState<State, FormData>(updateMemberFormActionWithId, initialState);
@@ -31,68 +30,70 @@ export default function Form({
       {/* form boundary */}
       <div className="rounded-md bg-gray-50 p-4 md:p-6">
         <fieldset className="grid grid-cols-2" id="name">
-          {false && <label
-            id="name"
-          >Name</label>}
           {/* first name */}
           <TextInput
-            fieldName={"first-name"}
+            fieldName={"fname"}
             label={'First name'}
-            value={member.firstName}
+            placeholder={'First name'}
+            defaultValue={member.firstName}
             state={state}
           />
           {/* last name */}
           <TextInput
-            fieldName={"last-name"}
+            fieldName={"lname"}
             label={'Last name'}
-            value={member.lastName}
+            placeholder={'Last name'}
+            defaultValue={member.lastName}
             state={state}
           />
 
         </fieldset>
-        <fieldset className="grid grid-cols-2" id="mailing-address">
+        <fieldset className="grid grid-cols-2" id="mailingaddress">
           {false && <label>Address</label>}
           {/* address */}
-          <div className="w">
-            <TextInput
-              fieldName={"address"}
-              label={'Address'}
-              value={member.address}
-              state={state}
-            />
-          </div>
+          <TextInput
+            fieldName={"address"}
+            label={'Address'}
+            placeholder={'Address'}
+            defaultValue={member.address}
+            state={state}
+          />
           {/* unit */}
           <TextInput
             fieldName={"unit"}
             label={'Unit'}
-            value={member.unit}
+            placeholder={'Unit'}
+            defaultValue={member.unit}
             state={state}
           />
           {/* city */}
           <TextInput
             fieldName={"city"}
             label={'City'}
-            value={member.city}
+            placeholder={'City'}
+            defaultValue={member.city}
             state={state}
           />
           {/* state  */}
           {/* TODO -- drop down */}
           <TextInput
+            fieldName={"state"}
             label={'State'}
-            fieldName={"State"}
-            value={member.state}
+            placeholder={'State'}
+            defaultValue={member.state}
             state={state}
           />
           {/* postalCode  */}
           {/* TODO -- magic */}
           <TextInput
+            fieldName={"postalcode"}
             label={'Postal code'}
-            fieldName={"postal-code"}
-            value={member.postalCode}
+            placeholder={'Postal code'}
+            defaultValue={member.postalCode}
             state={state}
           />
         </fieldset>
-        <fieldset className='grid grid-cols-2'>
+        <fieldset className='grid grid-cols-2' id='contactinfo'>
           {false && <label>
             Contact info
           </label>}
@@ -100,18 +101,20 @@ export default function Form({
           <TextInput
             fieldName={"email"}
             label={'Email'}
-            value={member.email}
+            placeholder={'Email'}
+            defaultValue={member.email}
             state={state}
           />
           {/* phone  */}
           <TextInput
             fieldName={"phone"}
             label={'Phone'}
-            value={member.phone}
+            placeholder={'Phone'}
+            defaultValue={member.phone}
             state={state}
           />
         </fieldset>
-        <fieldset className='grid grid-cols-6'>
+        <fieldset className='grid grid-cols-6' id='membershipinfo'>
           {false && <label>
             Membership info
           </label>}
@@ -119,7 +122,8 @@ export default function Form({
           <TextInput
             fieldName={"mmb"}
             label={'MMB'}
-            value={member.mmb}
+            placeholder={'MMB'}
+            defaultValue={member.mmb}
             state={state}
             disabled={true}
             readOnly={true}
@@ -130,7 +134,8 @@ export default function Form({
             <DateInput
               fieldName={"paid-through"}
               label={'Paid through'}
-              value={member.paidThrough}
+              placeholder={'Paid through'}
+              defaultValue={member.paidThrough}
               state={state}
               disabled={true}
               readOnly={true}
@@ -142,7 +147,8 @@ export default function Form({
             <DateInput
               fieldName={"joined"}
               label={'Joined'}
-              value={member.joined}
+              placeholder={'Joined'}
+              defaultValue={member.joined}
               state={state}
               disabled={true}
               readOnly={true}
@@ -151,7 +157,8 @@ export default function Form({
           <TextInput
             fieldName={"newsletter-type"}
             label={'Newsletter delivery'}
-            value={member.newsLetterType}
+            placeholder={'Newsletter delivery'}
+            defaultValue={member.newsletterType}
             state={state}
             disabled={true}
             readOnly={true}
@@ -160,7 +167,8 @@ export default function Form({
           <TextInput
             fieldName={"valid-email"}
             label={'Email status'}
-            value={member.validEmail}
+            placeholder={'Email status'}
+            defaultValue={member.validEmail}
             state={state}
             disabled={true}
             readOnly={true}
@@ -169,7 +177,8 @@ export default function Form({
           <TextInput
             fieldName={"valid-post-mail"}
             label={'Post status'}
-            value={fixValidPost(member.validPostMail)}
+            placeholder={'Post status'}
+            defaultValue={fixValidPost(member.validPostMail)}
             state={state}
             disabled={true}
             readOnly={true}
@@ -178,13 +187,89 @@ export default function Form({
           {member.lastUpdated &&
             <DateInput
               label={'Last updated'}
+              placeholder={'Last updated'}
               fieldName={"last-updated"}
-              value={member.lastUpdated}
+              defaultValue={member.lastUpdated}
               state={state}
               disabled={true}
               readOnly={true}
             />}
-
+        </fieldset>
+        {/* this field set is hidden
+          *  data stored herein during form hydration
+          *  is used to compare starting values with submitted values
+          */}
+        <fieldset id='priorvalues'>
+          {/* 
+          streetAddress && streetAddress !== "" &&
+    city && city !== "" &&
+    state && state !== "" &&
+    postalCode && postalCode !== ""
+  ) {
+    rawFormData['validPostMail'] */}
+          {/* address */}
+          <TextInput
+            fieldName={"prioraddress"}
+            defaultValue={member.address}
+            state={state}
+            hidden={true}
+          />
+          {/* unit */}
+          <TextInput
+            fieldName={"priorunit"}
+            defaultValue={member.unit}
+            state={state}
+            hidden={true}
+          />
+          {/* city */}
+          <TextInput
+            fieldName={"priorcity"}
+            defaultValue={member.city}
+            state={state}
+            hidden={true}
+          />
+          {/* state  */}
+          <TextInput
+            fieldName={"priorstate"}
+            defaultValue={member.state}
+            state={state}
+            hidden={true}
+          />
+          {/* postalCode  */}
+          <TextInput
+            fieldName={"priorpostalcode"}
+            defaultValue={member.postalCode}
+            state={state}
+            hidden={true}
+          />
+          {/* validPostMail */}
+          <TextInput
+            fieldName={'priorvalidpostmail'}
+            defaultValue={member.validPostMail}
+            state={state}
+            hidden={true}
+          />
+          {/* email  */}
+          <TextInput
+            fieldName={"prioremail"}
+            defaultValue={member.email}
+            state={state}
+            hidden={true}
+          />
+          {/* validEail */}
+          <TextInput
+            fieldName={'priorvalidemail'}
+            defaultValue={member.validEmail}
+            state={state}
+            hidden={true}
+          />
+          {/* newsletterType */}
+          <TextInput
+            fieldName={'priornewslettertype'}
+            defaultValue={member.newsletterType ?? ''}
+            state={state}
+            hidden={true}
+          />
         </fieldset>
       </div>
 

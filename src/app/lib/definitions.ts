@@ -99,7 +99,7 @@ export type MemberForm = {
   lastName: string;
   firstName: string;
   address: string;
-  unit:string;
+  unit: string;
   city: string;
   state: string;
   postalCode: string;
@@ -107,9 +107,9 @@ export type MemberForm = {
   phone: string;
   mmb: string;
   paidThrough: Date | undefined;
-  joined:Date|undefined;
-  newsLetterType:string;
-  validEmail:string;
-  validPostMail:string;
-  lastUpdated:Date|undefined;
+  joined: Date | undefined;
+  newsletterType: string;
+  validEmail: string;
+  validPostMail: string;
+  lastUpdated: Date | undefined;
 };
