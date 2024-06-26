@@ -13,7 +13,7 @@ const FormSchema = z.object({
   id: z.string(),
   lastName: z.string(),
   firstName: z.string(),
-  streetAddress: z.string().optional(),
+  address: z.string().optional(),
   unit: z.string().optional(),
   city: z.string().optional(),
   state: z.string().optional(),
@@ -100,7 +100,7 @@ export async function createMemberFormAction(
   // street address
   const streetAddress = formData.get('address');
   if (streetAddress) {
-    rawFormData['streetAddress'] = streetAddress
+    rawFormData['address'] = streetAddress
   }
 
   // unit
@@ -170,11 +170,15 @@ export async function createMemberFormAction(
   // mmb
   rawFormData['mmb'] = ' VOL';
 
+  // isActive
+  rawFormData['isActive'] = true;
+
   // *** finally, check the form data for missing or incorrect values
   const validatedFields = CreateMemberDocument.safeParse(rawFormData);
 
   // *** If form validation fails, return errors early. Otherwise, continue.
   if (!validatedFields.success) {
+    console.log(`Missing Fields. Failed to Create Member document: ${JSON.stringify(validatedFields.error.flatten().fieldErrors)}`)
     return {
       errors: validatedFields.error.flatten().fieldErrors,
       message: 'Missing Fields. Failed to Create Member document.',
@@ -240,7 +244,7 @@ export async function updateMemberFormAction(
   // street address
   const streetAddress = formData.get('address');
   if (streetAddress) {
-    rawFormData['streetAddress'] = streetAddress
+    rawFormData['address'] = streetAddress
   }
 
   // unit
@@ -320,6 +324,8 @@ export async function updateMemberFormAction(
           rawFormData['validPostMail'] = 'valid';
         }
         break;
+      default:
+        rawFormData['validPostMail'] = priorValidPostMail;
     }
   } else {
     rawFormData['validPostMail'] = 'none';
