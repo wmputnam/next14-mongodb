@@ -99,6 +99,7 @@ export default function Form({
             fieldName={"email"}
             label={'Email'} placeholder={'Email'}
             defaultValue=""
+            type={'email'}
             state={state}
           />
           {/* phone  */}

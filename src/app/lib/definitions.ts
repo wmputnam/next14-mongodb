@@ -94,6 +94,12 @@ export type MailingAddress = {
   postalCode: string;
 }
 
+export type Remittance = {
+  date: Date;
+  amount: string;
+  memo: string;
+};
+
 export type MemberForm = {
   id: string;
   lastName: string;
@@ -111,5 +117,6 @@ export type MemberForm = {
   newsletterType: string;
   validEmail: string;
   validPostMail: string;
+  remittances: Remittance[];
   lastUpdated: Date | undefined;
 };

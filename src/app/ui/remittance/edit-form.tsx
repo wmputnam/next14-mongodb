@@ -100,7 +100,6 @@ export default function Form({
           {/* email  */}
           <TextInput
             fieldName={"email"}
-            type={'email'}
             label={'Email'}
             placeholder={'Email'}
             defaultValue={member.email}

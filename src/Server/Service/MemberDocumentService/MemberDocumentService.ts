@@ -81,8 +81,12 @@ export class MemberDocumentService implements IMemberDocumentService {
     documentId: string,
     updateDocument: any
   ) {
-    console.log(`updateMemberDocument filter`)
-    return this.repository.updateDocument(documentId, updateDocument);
+    if (documentId) {
+      console.log(`updateMemberDocument documentId ${documentId}`)
+      return this.repository.updateDocument(documentId, updateDocument);
+    } else {
+      throw new Error(`updateMemberDocument received undefined document id`);
+    }
   }
 
   /**

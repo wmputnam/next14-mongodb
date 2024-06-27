@@ -6,9 +6,16 @@ import { State } from "./actions";
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { pathname } from 'next-extra/pathname';
+import { MemberForm, Remittance } from '@/app/lib/definitions';
+import { membershipDuesMmb } from '@/Client/lib/membershipDues';
 
 // import { UpdateMemberDocument } from '@/app/ui/members/buttons';
 
+const RemittanceSchema = z.object({
+  date: z.date(),
+  amount: z.string(),
+  memo: z.string(),
+})
 const FormSchema = z.object({
   id: z.string(),
   lastName: z.string(),
@@ -21,11 +28,14 @@ const FormSchema = z.object({
   email: z.string().optional(),
   phone: z.string().optional(),
   mmb: z.string(),
+  paidThrough: z.date().optional(),
+  joined: z.date().optional(),
   isActive: z.boolean(),
   validPostMail: z.enum(['valid', 'none', 'returned mail']),
   validEmail: z.enum(['none', 'verified', 'bounced', 'unchecked']),
   newsletterType: z.enum(['email', 'none', 'post', 'opted out']),
-  lastUpdated: z.string(),
+  remittances: z.array(RemittanceSchema).optional(),
+  lastUpdated: z.date(),
 });
 
 const CreateMemberDocument = FormSchema.omit({
@@ -36,7 +46,23 @@ const UpdateMemberDocument = FormSchema.omit({
   id: true,
   lastUpdated: true
 });
-
+const CreateMemberRemittance = FormSchema.pick({
+  mmb: true,
+  joined: true,
+  paidThrough: true,
+  remittances: true,
+});
+/*
+"issues":[
+{"code":"invalid_type","expected":"string","received":"undefined","path":["lastName"],"message":"Required"},
+{"code":"invalid_type","expected":"string","received":"undefined","path":["firstName"],"message":"Required"},
+{"code":"invalid_type","expected":"string","received":"undefined","path":["mmb"],"message":"Required"},
+{"code":"invalid_type","expected":"boolean","received":"undefined","path":["isActive"],"message":"Required"},
+{"expected":"'valid' | 'none' | 'returned mail'","received":"undefined","code":"invalid_type","path":["validPostMail"],"message":"Required"},
+{"expected":"'none' | 'verified' | 'bounced' | 'unchecked'","received":"undefined","code":"invalid_type","path":["validEmail"],"message":"Required"},
+{"expected":"'email' | 'none' | 'post' | 'opted out'","received":"undefined","code":"invalid_type","path":["newsletterType"],"message":"Required"}
+]
+*/
 
 /**
  * @asysnc @function fetchMembers
@@ -168,7 +194,7 @@ export async function createMemberFormAction(
   }
 
   // mmb
-  rawFormData['mmb'] = ' VOL';
+  rawFormData['mmb'] = 'VOL';
 
   // isActive
   rawFormData['isActive'] = true;
@@ -224,8 +250,12 @@ export const fetchMemberById = async (filter: any, projection: any = {}) => {
  * @returns Promise<IMember>
  */
 export const updateMemberById = async (documentId: string, data: Partial<IMemberDocument>) => {
-  const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.updateMemberDocument(documentId, data);
+  if (documentId) {
+    const memberDocumentService = new MemberDocumentService();
+    return await memberDocumentService.updateMemberDocument(documentId, data);
+  } else {
+    throw new Error(`missing document id`);
+  }
 }
 
 export async function updateMemberFormAction(
@@ -450,6 +480,222 @@ export async function updateMemberFormAction(
 
 }
 
+export async function createMemberRemittanceFormAction(
+  prevState: State,
+  formData: FormData,
+): Promise<State> {
+  const memberId = (formData.get('memberid') ?? '') as string;
+
+  const mmb = (formData.get('mmb') ?? '') as string;
+
+  const joinedString = (formData.get('joined') ?? '') as string;
+
+  let joined: Date | undefined;
+  if (joinedString && joinedString !== '') {
+    joined = new Date(joinedString);
+  } else {
+    joined = undefined;
+  }
+
+  const paidThroughDateString = (formData.get('paidthroughdate') ?? '') as string;
+  let paidThroughDate: Date | undefined;
+  if (paidThroughDateString && paidThroughDateString !== '') {
+    paidThroughDate = new Date(paidThroughDateString);
+  } else {
+    paidThroughDate = undefined;
+  }
+
+  //< console.log(`createMemberRemittanceFormAction memberid: "${memberId}"`);
+
+  const rawRemittances = Array<Remittance>();
+
+  // *** load in prior remittances
+  const priorRemittancesAsJSON = formData.get('priorremittances');
+  const priorRemittancesRaw: Remittance[] = JSON.parse(priorRemittancesAsJSON as string);
+  for (let i = 0; i < priorRemittancesRaw.length; i++) {
+    const rr = {
+      date: new Date(priorRemittancesRaw[i].date),
+      amount: priorRemittancesRaw[i].amount,
+      memo: priorRemittancesRaw[i].memo,
+    };
+    rawRemittances.push(rr);
+  }
+
+  //< console.log(`createMemberRemittanceFormAction rawRemittances: ${JSON.stringify(rawRemittances)}`);
+
+  // *** get the editable field data from the form
+  // remittance date
+  const remittanceDateString: string = (formData.get('date') ?? '') as string;
+  if (remittanceDateString !== '') {
+    let remittanceDate: Date;
+    try {
+      remittanceDate = new Date(`${remittanceDateString.slice(0, 10)}T00:00:00`);
+    } catch (err: any) {
+      throw new Error(`unable to parse Date ${remittanceDateString}`);
+    }
+
+    // dues amount
+    const duesAmount: string = (formData.get('duesamount') ?? '') as string;
+    // console.log(`createMemberRemittanceFormAction dues amout: ${duesAmount}`)
+    if (duesAmount !== '' && duesAmount !== '0.00') {
+      rawRemittances.push({
+        date: remittanceDate ?? '',
+        amount: duesAmount,
+        memo: 'dues',
+      })
+    }
+
+    // donation amount
+    const donationAmount: string = (formData.get('donationamount') ?? '') as string;
+    if (donationAmount !== '' && donationAmount !== '0.00') {
+      rawRemittances.push({
+        date: remittanceDate ?? '',
+        amount: donationAmount,
+        memo: 'donation',
+      })
+    }
+
+    const partialMemDoc: Partial<IMemberDocument> = { remittances: rawRemittances }
+    const ONE_DAY_IN_MILLISECONDS = 86400000;
+
+    // what impact, if any on mmb, joined, paidThrough
+    // mmb VOL: joined may or may not have value, paidthough should be undefined
+    //   dues => mmb: as appropriate to dues amount, joined: remittance date, paidThough: 1 year after remittance date
+    //   donation => no effect on mmb, joined, or paidThrough
+    // mmb LM|HLM|BEN: joined should have value, paidthrough should be undefined (always paid up)
+    //   hide dues
+    //   donation=> no effect on mmb, joined, or paidThrough
+    // mmb all others: joined should have value, paidthrough should have value
+    //   dues => mmb: as appropriate to dues amount, joined: remittance date, paidThough: 1 year after remittance date
+    //   donation => no effect on mmb, joined, or paidThrough
+    switch (mmb) {
+      case 'LM':
+      case 'HLM':
+      case 'BEN':
+        partialMemDoc['mmb'] = mmb;
+        break;
+      case 'VOL': {
+        const newMmb = membershipDuesMmb(duesAmount);
+        if (newMmb !== 'VOL') {
+          partialMemDoc['joined'] = remittanceDate;
+          partialMemDoc['paidThrough'] = dateForEndOfYearSpan(remittanceDate);
+          partialMemDoc['mmb'] = `${newMmb}${!['LM'].includes(newMmb) ? partialMemDoc['paidThrough'].toISOString().slice(2, 4) : ''}`;
+        } else {
+          partialMemDoc['mmb'] = newMmb;
+        }
+        break;
+      }
+      default: {
+        const newMmb = membershipDuesMmb(duesAmount);
+        if (newMmb !== 'VOL') {
+          partialMemDoc['joined'] = joined;
+          if (paidThroughDate && remittanceDate.valueOf() <= paidThroughDate?.valueOf()) {
+            partialMemDoc['paidThrough'] = dateForEndOfYearSpan(new Date(paidThroughDate.valueOf() + ONE_DAY_IN_MILLISECONDS));
+          } else {
+            partialMemDoc['paidThrough'] = dateForEndOfYearSpan(remittanceDate);
+          }
+          partialMemDoc['mmb'] = `${newMmb}${!['LM'].includes(newMmb) ? partialMemDoc['paidThrough'].toISOString().slice(2, 4) : ''}`;
+        } else {
+          partialMemDoc['mmb'] = newMmb;
+        }
+        break;
+      }
+    }
+
+    console.log(`createMemberRemittanceFormAction partialMemDoc: ${JSON.stringify(partialMemDoc)}`);
+
+    const validatedFields = CreateMemberRemittance.safeParse(partialMemDoc);
+    console.log(`createMemberRemittanceFormAction validatedFields: ${JSON.stringify(validatedFields)}`);
+
+    if (!validatedFields.success) {
+      // If form validation fails, return errors early. Otherwise, continue.
+      return {
+        // errors: validatedFields?.error?.flatten().fieldErrors,
+        message: 'Missing Fields. Failed to Update Member.',
+      };
+    }
+    try {
+      updateMemberById(memberId, validatedFields.data as unknown as Partial<IMemberDocument>);
+    } catch (err: any) {
+      console.error(`Database Error: Failed to Update Member: ${JSON.stringify(err)}`);
+      return {
+        message: 'Database Error: Failed to Update Member.',
+      };
+    }
+
+    // Revalidate the cache for the members page and redirect the user.
+    revalidatePath(MEMBERS_PAGE_PATH);
+    redirect(MEMBERS_PAGE_PATH);
+  }
+  return {} as State;
+}
+
+const dateForEndOfYearSpan = (d: Date): Date => {
+  const givenDate = d.getDate();
+  const givenMonth = d.getMonth();
+  console.log(`given: ${givenMonth} ${givenDate}`)
+
+  /* y = givenYear + 1 */
+
+  const nextYear = d.getFullYear() + 1;
+  let nextDate;
+  let nextMonth;
+
+  if (d.getDate() === 0) {
+    if (d.getMonth() === 0) {
+      /* Jan 1 => Dev 31 :=> m = 12, d = 31*/
+      nextMonth = 12;
+      nextDate = 31;
+    } else {
+      /* 1st of month not Jan: m = givenMonth - 1; d = last day of month */
+      nextMonth = givenMonth - 1;
+      nextDate = lastDayOf(givenMonth, nextYear);
+    }
+  } else {
+    /* m = givenMonth; d = givenDay - 1; */
+    nextMonth = givenMonth;
+    nextDate = givenDate - 1;
+  }
+  return new Date(nextYear, nextMonth, nextDate);
+}
+
+const lastDayOf = (month: number, year: number) => {
+  switch (month) {
+    case 0: // Jan
+      return 31;
+    case 1: // Feb
+      if (year % 4 === 0 && year % 100 !== 0) {
+        // leap year
+        return 29;
+      } else {
+        return 28;
+      }
+    case 2: // Mar
+      return 31;
+    case 3: // Apr
+      return 30;
+    case 4: // May
+      return 31;
+    case 5: // Jun
+      return 30;
+    case 6: // Jul
+      return 31;
+    case 7: // Aug
+      return 30;
+    case 8: // Sep
+      return 31;
+    case 9: // Oct
+      return 31;
+    case 10: // Nov
+      return 30;
+    case 11: // Dec
+      return 31;
+
+    default:
+      throw new Error(`month must be between 0 and 11`)
+  }
+}
+
 
 /**
  @server @async @function deleteMemberById(memberDocId: string) 
@@ -459,4 +705,42 @@ export async function updateMemberFormAction(
 export const deleteMemberById = async (filter: any) => {
   const memberDocumentService = new MemberDocumentService();
   return await memberDocumentService.deleteMemberDocument(filter);
+}
+
+// export async function createMemberRemittanceFormAction(
+//   prevState: State,
+//   formData: FormData,
+// ): Promise<State> {
+//   return (
+//     {}
+//   );
+// }
+
+export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) => {
+  if (m._id) {
+    const id = m._id.toString();
+    const mform = {
+      id: id,
+      lastName: m.lastName ? m.lastName : "",
+      firstName: m.firstName ? m.firstName : "",
+      address: m.address ? m.address : "",
+      unit: m.unit ? m.unit : "",
+      city: m.city ? m.city : "",
+      state: m.state ? m.state : "",
+      postalCode: m.postalCode ? m.postalCode : "",
+      email: m.email ? m.email : "",
+      phone: m.phone ? m.phone : "",
+      mmb: m.mmb ? (m.mmb.slice(0, 3) === 'BEN' ? 'LM' : m.mmb) : "",
+      paidThrough: m.paidThrough ? m.paidThrough : undefined,
+      joined: m.joined ? m.joined : undefined,
+      newsletterType: m.newsletterType ? m.newsletterType : "",
+      validEmail: m.validEmail ? m.validEmail : "",
+      validPostMail: m.validPostMail ? m.validPostMail : "",
+      remittances: m.remittances ? m.remittances : [],
+      lastUpdated: m.lastUpdated ? m.lastUpdated : undefined,
+    } satisfies MemberForm;
+    return JSON.stringify(mform);
+  } else {
+    throw new Error('returned member document has no "_id"');
+  }
 }
