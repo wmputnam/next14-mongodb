@@ -1,6 +1,6 @@
 import React, { Suspense } from 'react';
 import { fetchMembersPageCount } from '@/Server/actions/MemberDocumentActions';
-import { MembersTable } from '@/app//ui/members/table';
+import { Table } from '@/app//ui/members/table';
 import { Pagination } from '@/app//ui/members/pagination';
 
 type ISearchQuery = {
@@ -33,7 +33,7 @@ export default async function Home({
         <Suspense fallback={<h6 className='text-center ltr'>📡 Loading data please wait ... </h6>}>
           {totalPages > 0 ?
             <>
-              <MembersTable
+              <Table
                 currentPage={pageNumber}
                 limit={DOCS_PER_PAGE}
                 filter={filterActiveOnly()}

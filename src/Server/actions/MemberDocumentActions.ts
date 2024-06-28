@@ -1,23 +1,25 @@
 'use server';
 import { z } from 'zod';
-import { IMemberDocument } from "../Service/MemberDocumentService";
+import { IMemberDocument, IRemittance } from "../Service/MemberDocumentService";
 import { MemberDocumentService } from "../Service/MemberDocumentService/MemberDocumentService";
 import { State } from "./actions";
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { pathname } from 'next-extra/pathname';
 import { MemberForm, Remittance } from '@/app/lib/definitions';
 import { membershipDuesMmb } from '@/Client/lib/membershipDues';
+import { ObjectId } from 'mongodb';
 
 // import { UpdateMemberDocument } from '@/app/ui/members/buttons';
 
 const RemittanceSchema = z.object({
+  id: z.string(), // an ObjectId in the mongo db
   date: z.date(),
   amount: z.string(),
   memo: z.string(),
 })
+
 const FormSchema = z.object({
-  id: z.string(),
+  id: z.string(), // an ObjectId in the mongo db
   lastName: z.string(),
   firstName: z.string(),
   address: z.string().optional(),
@@ -42,27 +44,18 @@ const CreateMemberDocument = FormSchema.omit({
   id: true,
   lastUpdated: true,
 });
+
 const UpdateMemberDocument = FormSchema.omit({
   id: true,
   lastUpdated: true
 });
+
 const CreateMemberRemittance = FormSchema.pick({
   mmb: true,
   joined: true,
   paidThrough: true,
   remittances: true,
 });
-/*
-"issues":[
-{"code":"invalid_type","expected":"string","received":"undefined","path":["lastName"],"message":"Required"},
-{"code":"invalid_type","expected":"string","received":"undefined","path":["firstName"],"message":"Required"},
-{"code":"invalid_type","expected":"string","received":"undefined","path":["mmb"],"message":"Required"},
-{"code":"invalid_type","expected":"boolean","received":"undefined","path":["isActive"],"message":"Required"},
-{"expected":"'valid' | 'none' | 'returned mail'","received":"undefined","code":"invalid_type","path":["validPostMail"],"message":"Required"},
-{"expected":"'none' | 'verified' | 'bounced' | 'unchecked'","received":"undefined","code":"invalid_type","path":["validEmail"],"message":"Required"},
-{"expected":"'email' | 'none' | 'post' | 'opted out'","received":"undefined","code":"invalid_type","path":["newsletterType"],"message":"Required"}
-]
-*/
 
 /**
  * @asysnc @function fetchMembers
@@ -109,7 +102,8 @@ export const createMember = async (data: Partial<IMemberDocument>) => {
   return await memberDocumentService.createMemberDocument(data);
 }
 
-const MEMBERS_PAGE_PATH = '/dashboard/members';
+const MEMBERS_PAGE_PATH = () => `/dashboard/members`;
+const MEMBER_REMITS_PAGE_PATH = (id:string) => `/dashboard/members/${id}/remittances`;
 
 export async function createMemberFormAction(
   prevState: State,
@@ -225,22 +219,22 @@ export async function createMemberFormAction(
 
 
   // *** Revalidate the cache for the members page and redirect the user.
-  revalidatePath(MEMBERS_PAGE_PATH);
+  revalidatePath(MEMBERS_PAGE_PATH());
 
   // *** And redirect to the new URL
-  redirect(MEMBERS_PAGE_PATH);
+  redirect(MEMBERS_PAGE_PATH());
 }
 
 
 /**
  * @server @async @function fetchMemberById(memberDocId: string) 
- * @param filter -- mongodb filter to select memeber document (typically document _id)
- * @param projection -- document properties to return
+ * @param documentId
+ * @param projection -- document properties to return ({} is everything)
  * @returns Promise<Partial<IMember>>
  */
-export const fetchMemberById = async (filter: any, projection: any = {}) => {
+export const fetchMemberById = async (documentId: string, projection: any = {}) => {
   const memberDocumentService = new MemberDocumentService();
-  return await memberDocumentService.fetchMemberDocumentById(filter, projection);
+  return await memberDocumentService.fetchMemberDocumentById(documentId, projection);
 }
 
 /**
@@ -313,8 +307,6 @@ export async function updateMemberFormAction(
     rawFormData['phone'] = phone
   }
 
-
-
   // validPostMail
   // *** did this address data change?
   // *** how does that change impact the validPostMail?
@@ -366,8 +358,8 @@ export async function updateMemberFormAction(
   // *** how does that change impact the validEmail?
   const priorEmail = formData.get('prioremail');
 
-  console.log(`updateMemberFormAction email:${email}`);
-  console.log(`updateMemberFormAction prioremail:${formData.get('prioremail')}`);
+  //< console.log(`updateMemberFormAction email:${email}`);
+  //< console.log(`updateMemberFormAction prioremail:${formData.get('prioremail')}`);
 
   if ((email ?? '') === '') {
     rawFormData['validEmail'] = 'none';
@@ -378,8 +370,8 @@ export async function updateMemberFormAction(
       ((email ?? '') !== (priorEmail ?? ''))
     );
 
-    console.log(`updateMemberFormAction priorValidEmail:${priorValidEmail}`);
-    console.log(`updateMemberFormAction isEmailChanged:${isEmailChanged}`);
+    //< console.log(`updateMemberFormAction priorValidEmail:${priorValidEmail}`);
+    //< console.log(`updateMemberFormAction isEmailChanged:${isEmailChanged}`);
 
     switch (priorValidEmail ?? '') {
       case 'none':
@@ -404,12 +396,6 @@ export async function updateMemberFormAction(
   // const priorValidEmail = formData.get('priorvalidemail');
   const priorNewsletterType = formData.get('priornewslettertype');
 
-  // const isValidPostMailChanged = (
-  //   ((priorValidPostMail ?? '') !== rawFormData['validPostMail'])
-  // );
-  // const isValidEmailChanged = (
-  //   ((priorValidEmail ?? '') !== rawFormData['validEmail'])
-  // );
   switch (priorNewsletterType ?? '') {
     case 'opted out':
       rawFormData['newsletterType'] = 'opted out';
@@ -451,6 +437,8 @@ export async function updateMemberFormAction(
 
   rawFormData['isActive'] = formData.get('isActive') ?? true;
 
+  //? remittances? TODO
+
   console.log(`MemberDocumentActions updateMemberFormAction rawFormData: ${JSON.stringify(rawFormData)}`);
 
   const validatedFields = UpdateMemberDocument.safeParse(rawFormData);
@@ -475,8 +463,8 @@ export async function updateMemberFormAction(
   }
 
   // Revalidate the cache for the members page and redirect the user.
-  revalidatePath(MEMBERS_PAGE_PATH);
-  redirect(MEMBERS_PAGE_PATH);
+  revalidatePath(MEMBERS_PAGE_PATH());
+  redirect(MEMBERS_PAGE_PATH());
 
 }
 
@@ -514,6 +502,7 @@ export async function createMemberRemittanceFormAction(
   const priorRemittancesRaw: Remittance[] = JSON.parse(priorRemittancesAsJSON as string);
   for (let i = 0; i < priorRemittancesRaw.length; i++) {
     const rr = {
+      id: priorRemittancesRaw[i].id,
       date: new Date(priorRemittancesRaw[i].date),
       amount: priorRemittancesRaw[i].amount,
       memo: priorRemittancesRaw[i].memo,
@@ -521,7 +510,7 @@ export async function createMemberRemittanceFormAction(
     rawRemittances.push(rr);
   }
 
-  //< console.log(`createMemberRemittanceFormAction rawRemittances: ${JSON.stringify(rawRemittances)}`);
+  console.log(`createMemberRemittanceFormAction rawRemittances prior: ${JSON.stringify(rawRemittances)}`);
 
   // *** get the editable field data from the form
   // remittance date
@@ -539,6 +528,7 @@ export async function createMemberRemittanceFormAction(
     // console.log(`createMemberRemittanceFormAction dues amout: ${duesAmount}`)
     if (duesAmount !== '' && duesAmount !== '0.00') {
       rawRemittances.push({
+        id: new ObjectId().toString(),
         date: remittanceDate ?? '',
         amount: duesAmount,
         memo: 'dues',
@@ -549,6 +539,7 @@ export async function createMemberRemittanceFormAction(
     const donationAmount: string = (formData.get('donationamount') ?? '') as string;
     if (donationAmount !== '' && donationAmount !== '0.00') {
       rawRemittances.push({
+        id: new ObjectId().toString(),
         date: remittanceDate ?? '',
         amount: donationAmount,
         memo: 'donation',
@@ -624,8 +615,8 @@ export async function createMemberRemittanceFormAction(
     }
 
     // Revalidate the cache for the members page and redirect the user.
-    revalidatePath(MEMBERS_PAGE_PATH);
-    redirect(MEMBERS_PAGE_PATH);
+    revalidatePath(MEMBER_REMITS_PAGE_PATH(memberId));
+    redirect(MEMBER_REMITS_PAGE_PATH(memberId));
   }
   return {} as State;
 }
@@ -718,7 +709,26 @@ export const deleteMemberById = async (filter: any) => {
 
 export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) => {
   if (m._id) {
+    // IMember _id is a mongo ObejctId
     const id = m._id.toString();
+
+    // hydrate remittances before creating the from data
+    const remittances = m.remittances ?
+      (
+        m.remittances.map((r: IRemittance) => (
+          {
+            // id is a mongo ObjectId
+            id: r.id.toString(),
+            date: r.date,
+            amount: r.amount,
+            memo: r.memo
+          }
+        ))
+      ) :
+      (
+        Array<Remittance>()
+      );
+
     const mform = {
       id: id,
       lastName: m.lastName ? m.lastName : "",
@@ -736,7 +746,7 @@ export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) 
       newsletterType: m.newsletterType ? m.newsletterType : "",
       validEmail: m.validEmail ? m.validEmail : "",
       validPostMail: m.validPostMail ? m.validPostMail : "",
-      remittances: m.remittances ? m.remittances : [],
+      remittances: remittances,
       lastUpdated: m.lastUpdated ? m.lastUpdated : undefined,
     } satisfies MemberForm;
     return JSON.stringify(mform);

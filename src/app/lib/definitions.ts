@@ -95,6 +95,7 @@ export type MailingAddress = {
 }
 
 export type Remittance = {
+  id: string;
   date: Date;
   amount: string;
   memo: string;

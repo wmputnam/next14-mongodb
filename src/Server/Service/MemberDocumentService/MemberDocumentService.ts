@@ -58,17 +58,17 @@ export class MemberDocumentService implements IMemberDocumentService {
   * @function fetchMemberDocumentById
   * @async
   * @description find and return Member documents in the db
-  * @param [filter={}] -- Partial<T> MongoDB filter
+  * @param [documentId={}] -- Partial<T> MongoDB filter
   * @param [page=1] -- which page of results to return 
   * @param [limit=10] -- max docs per page
   * @param [projection={}] -- which doc properties
   * @returns Promise { <data: T[], totalCount:number>} -- projected doc array (up to limit) and size of filtered set
   */
   async fetchMemberDocumentById(
-    filter: any,
+    documentId: string,
     projection: any = {}
   ): Promise<IMemberDocument | undefined> {
-    return this.repository.fetchDocumentById(filter, projection);
+    return this.repository.fetchDocumentById(documentId, projection);
   }
 
   /**

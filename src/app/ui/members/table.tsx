@@ -1,5 +1,5 @@
 // import Image from 'next/image';
-import { UpdateMemberDocument, DeleteMemberDocument, CreateMemberRemittance } from '@/app/ui/members/buttons';
+import { UpdateMemberDocument, DeleteMemberDocument, ViewMemberRemittances } from '@/app/ui/members/buttons';
 import { formatDateToLocal } from '@/app/lib/utils';
 import { IMemberDocument } from '@/Server/Service/MemberDocumentService';
 import { fetchMembers } from '@/Server/actions/MemberDocumentActions';
@@ -18,7 +18,7 @@ import clsx from 'clsx';
  * @param params.query -- string value to match in lastName
  * @returns React.JSX table of member docs
  */
-export async function MembersTable({
+export async function Table({
   filter = { isActive: true },
   currentPage = 1,
   limit = 10,
@@ -300,7 +300,7 @@ export async function MembersTable({
                   <td className="whitespace-nowrap py-2 pl-6 pr-3">
                     <div className="flex justify-end gap-3">
                       <UpdateMemberDocument id={member._id ? member._id.toString() : ""} />
-                      <CreateMemberRemittance id={member._id ? member._id.toString() : ""} />
+                      <ViewMemberRemittances id={member._id ? member._id.toString() : ""} />
                     </div>
                   </td>
                 </tr>
@@ -313,4 +313,4 @@ export async function MembersTable({
   );
 }
 
-export default MembersTable;
+export default Table;
