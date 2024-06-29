@@ -101,6 +101,12 @@ export type Remittance = {
   memo: string;
 };
 
+export type Note = {
+  id: string;
+  date: Date;
+  note: string;
+};
+
 export type MemberForm = {
   id: string;
   lastName: string;
@@ -119,5 +125,6 @@ export type MemberForm = {
   validEmail: string;
   validPostMail: string;
   remittances: Remittance[];
+  notes: Note[];
   lastUpdated: Date | undefined;
 };

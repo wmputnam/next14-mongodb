@@ -1,4 +1,5 @@
 import { deleteMemberById } from '@/Server/actions/MemberDocumentActions';
+import { Note } from '@/app/lib/definitions';
 import { PencilIcon, PlusIcon, TrashIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 // import { deleteInvoice } from '@/app/lib/actions';
@@ -21,6 +22,21 @@ export function UpdateMemberDocument
   return (
     <Link
       href={`/dashboard/members/${id}/edit`}
+      className="rounded-md border p-2 hover:bg-gray-100"
+      title='Update member'
+    >
+      <PencilIcon className="w-5" />
+    </Link>
+  );
+}
+
+export function UpdateMemberNote
+  ({ memberId, noteId, notes }: { memberId: string, noteId: string, notes: Note[] }) {
+
+
+  return (
+    <Link
+      href={`/dashboard/members/${memberId}/notes/${noteId}/edit`}
       className="rounded-md border p-2 hover:bg-gray-100"
       title='Update member'
     >
@@ -53,6 +69,20 @@ export function CreateMemberRemittance
     >
       {/* flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200*/}
       <span className="hidden md:block">Add remittance</span>{' '}
+      <PlusIcon className="h-5 md:ml-4" />
+    </Link>
+  );
+}
+
+export function CreateMemberNote
+  ({ id }: { id: string }) {
+  return (
+    <Link
+      href={`/dashboard/members/${id}/notes/create`}
+      className="flex items-center align-middle rounded-lg border h-10 px-4 text-sm font-medium bg-gray-100  transition-colors hover:bg-gray-200 text-gray-600"
+    >
+      {/* flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200*/}
+      <span className="hidden md:block">Add note</span>{' '}
       <PlusIcon className="h-5 md:ml-4" />
     </Link>
   );

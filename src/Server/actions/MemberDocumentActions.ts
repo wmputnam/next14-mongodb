@@ -1,11 +1,11 @@
 'use server';
 import { z } from 'zod';
-import { IMemberDocument, IRemittance } from "../Service/MemberDocumentService";
+import { IMemberDocument, IRemittance, INotes } from "../Service/MemberDocumentService";
 import { MemberDocumentService } from "../Service/MemberDocumentService/MemberDocumentService";
 import { State } from "./actions";
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { MemberForm, Remittance } from '@/app/lib/definitions';
+import { MemberForm, Note, Remittance } from '@/app/lib/definitions';
 import { membershipDuesMmb } from '@/Client/lib/membershipDues';
 import { ObjectId } from 'mongodb';
 
@@ -16,7 +16,13 @@ const RemittanceSchema = z.object({
   date: z.date(),
   amount: z.string(),
   memo: z.string(),
-})
+});
+
+const NoteSchema = z.object({
+  id: z.string(), // an ObjectId in the mongo db
+  date: z.date(),
+  note: z.string(),
+});
 
 const FormSchema = z.object({
   id: z.string(), // an ObjectId in the mongo db
@@ -37,6 +43,7 @@ const FormSchema = z.object({
   validEmail: z.enum(['none', 'verified', 'bounced', 'unchecked']),
   newsletterType: z.enum(['email', 'none', 'post', 'opted out']),
   remittances: z.array(RemittanceSchema).optional(),
+  notes: z.array(NoteSchema).optional(),
   lastUpdated: z.date(),
 });
 
@@ -55,6 +62,14 @@ const CreateMemberRemittance = FormSchema.pick({
   joined: true,
   paidThrough: true,
   remittances: true,
+});
+
+const CreateMemberNote = FormSchema.pick({
+  notes: true,
+});
+
+const UpdateMemberNote = FormSchema.pick({
+  notes: true,
 });
 
 /**
@@ -103,7 +118,8 @@ export const createMember = async (data: Partial<IMemberDocument>) => {
 }
 
 const MEMBERS_PAGE_PATH = () => `/dashboard/members`;
-const MEMBER_REMITS_PAGE_PATH = (id:string) => `/dashboard/members/${id}/remittances`;
+const MEMBER_REMITS_PAGE_PATH = (id: string) => `/dashboard/members/${id}/remittances`;
+const MEMBER_NOTES_PAGE_PATH = (id: string) => `/dashboard/members/${id}/notes`;
 
 export async function createMemberFormAction(
   prevState: State,
@@ -358,8 +374,6 @@ export async function updateMemberFormAction(
   // *** how does that change impact the validEmail?
   const priorEmail = formData.get('prioremail');
 
-  //< console.log(`updateMemberFormAction email:${email}`);
-  //< console.log(`updateMemberFormAction prioremail:${formData.get('prioremail')}`);
 
   if ((email ?? '') === '') {
     rawFormData['validEmail'] = 'none';
@@ -369,9 +383,6 @@ export async function updateMemberFormAction(
     const isEmailChanged = (
       ((email ?? '') !== (priorEmail ?? ''))
     );
-
-    //< console.log(`updateMemberFormAction priorValidEmail:${priorValidEmail}`);
-    //< console.log(`updateMemberFormAction isEmailChanged:${isEmailChanged}`);
 
     switch (priorValidEmail ?? '') {
       case 'none':
@@ -437,12 +448,7 @@ export async function updateMemberFormAction(
 
   rawFormData['isActive'] = formData.get('isActive') ?? true;
 
-  //? remittances? TODO
-
-  console.log(`MemberDocumentActions updateMemberFormAction rawFormData: ${JSON.stringify(rawFormData)}`);
-
   const validatedFields = UpdateMemberDocument.safeParse(rawFormData);
-  console.log(`MemberDocumentActions updateMemberFormAction validatedFields: ${JSON.stringify(validatedFields)}`);
 
   // If form validation fails, return errors early. Otherwise, continue.
   if (!validatedFields.success) {
@@ -465,6 +471,65 @@ export async function updateMemberFormAction(
   // Revalidate the cache for the members page and redirect the user.
   revalidatePath(MEMBERS_PAGE_PATH());
   redirect(MEMBERS_PAGE_PATH());
+
+}
+
+export async function updateMemberNoteFormAction(
+  id: string,
+  prevState: State,
+  formData: FormData,
+): Promise<State> {
+
+  // *** get the editable field data from the form
+  // first name, last name
+  const rawFormData: { notes: Note[] } = { notes: [] };
+
+  // const memberId: string = (formData.get('memberid') ?? '') as string;
+  const noteId: string = (formData.get('noteid') ?? '') as string;
+  const priorNotesJSON: string = (formData.get('notes') ?? '') as string;
+  const priorNotes: Note[] = JSON.parse(priorNotesJSON);
+  const newDate: Date = new Date((formData.get('date') ?? '') as string);
+  const newNote: string = (formData.get('note') ?? '') as string;
+
+  const updatedNote: Note = {
+    id: noteId,
+    date: newDate,
+    note: newNote
+  };
+
+  const oldNotesToKeep: Note[] = priorNotes
+    .filter((n) => n.id !== noteId)
+    .map((n) => ({
+      id: n.id,
+      date: new Date(n.date),
+      note: n.note,
+    }));
+
+  rawFormData['notes'] = [...oldNotesToKeep, updatedNote]
+
+  const validatedFields = UpdateMemberNote.safeParse(rawFormData);
+
+  // If form validation fails, return errors early. Otherwise, continue.
+  if (!validatedFields.success) {
+    return {
+      // errors: validatedFields.error.flatten().fieldErrors,
+      message: 'Missing Fields. Failed to Update Member.',
+    };
+  }
+
+
+  try {
+    updateMemberById(id, validatedFields.data);
+  } catch (err: any) {
+    console.error(`Database Error: Failed to Update Member: ${JSON.stringify(err)}`);
+    return {
+      message: 'Database Error: Failed to Update Member.',
+    };
+  }
+
+  // Revalidate the cache for the members page and redirect the user.
+  revalidatePath(MEMBER_NOTES_PAGE_PATH(id));
+  redirect(MEMBER_NOTES_PAGE_PATH(id));
 
 }
 
@@ -493,8 +558,6 @@ export async function createMemberRemittanceFormAction(
     paidThroughDate = undefined;
   }
 
-  //< console.log(`createMemberRemittanceFormAction memberid: "${memberId}"`);
-
   const rawRemittances = Array<Remittance>();
 
   // *** load in prior remittances
@@ -510,8 +573,6 @@ export async function createMemberRemittanceFormAction(
     rawRemittances.push(rr);
   }
 
-  console.log(`createMemberRemittanceFormAction rawRemittances prior: ${JSON.stringify(rawRemittances)}`);
-
   // *** get the editable field data from the form
   // remittance date
   const remittanceDateString: string = (formData.get('date') ?? '') as string;
@@ -525,7 +586,6 @@ export async function createMemberRemittanceFormAction(
 
     // dues amount
     const duesAmount: string = (formData.get('duesamount') ?? '') as string;
-    // console.log(`createMemberRemittanceFormAction dues amout: ${duesAmount}`)
     if (duesAmount !== '' && duesAmount !== '0.00') {
       rawRemittances.push({
         id: new ObjectId().toString(),
@@ -593,10 +653,7 @@ export async function createMemberRemittanceFormAction(
       }
     }
 
-    console.log(`createMemberRemittanceFormAction partialMemDoc: ${JSON.stringify(partialMemDoc)}`);
-
     const validatedFields = CreateMemberRemittance.safeParse(partialMemDoc);
-    console.log(`createMemberRemittanceFormAction validatedFields: ${JSON.stringify(validatedFields)}`);
 
     if (!validatedFields.success) {
       // If form validation fails, return errors early. Otherwise, continue.
@@ -621,14 +678,85 @@ export async function createMemberRemittanceFormAction(
   return {} as State;
 }
 
+export async function createMemberNoteFormAction(
+  prevState: State,
+  formData: FormData,
+): Promise<State> {
+  const memberId = (formData.get('memberid') ?? '') as string;
+
+  if (memberId) {
+
+    const rawNotes = Array<Note>();
+
+    // *** load in prior remittances
+    const priorNotesAsJSON = formData.get('priornotes');
+    const priorNotesRaw: Note[] = JSON.parse(priorNotesAsJSON as string);
+    for (let i = 0; i < priorNotesRaw.length; i++) {
+      const rr = {
+        id: priorNotesRaw[i].id,
+        date: new Date(priorNotesRaw[i].date),
+        note: priorNotesRaw[i].note,
+      };
+      rawNotes.push(rr);
+    }
+
+    // *** get the editable field data from the form
+    // note date
+    const formNoteDateString: string = (formData.get('date') ?? '') as string;
+    if (formNoteDateString !== '') {
+      let formNoteDate: Date;
+      try {
+        formNoteDate = new Date(`${formNoteDateString.slice(0, 10)}T00:00:00`);
+      } catch (err: any) {
+        throw new Error(`unable to parse Date ${formNoteDateString}`);
+      }
+
+      // note note
+      const formNote: string = (formData.get('note') ?? '') as string;
+      if (formNote !== '') {
+        rawNotes.push({
+          id: new ObjectId().toString(),
+          date: formNoteDate ?? '',
+          note: formNote,
+        })
+      }
+
+    }
+
+    const partialMemDoc: Partial<IMemberDocument> = { notes: rawNotes }
+
+    const validatedFields = CreateMemberNote.safeParse(partialMemDoc);
+
+    if (!validatedFields.success) {
+      // If form validation fails, return errors early. Otherwise, continue.
+      return {
+        // errors: validatedFields?.error?.flatten().fieldErrors,
+        message: 'Missing Fields. Failed to Update Member.',
+      };
+    }
+    try {
+      updateMemberById(memberId, validatedFields.data as unknown as Partial<IMemberDocument>);
+    } catch (err: any) {
+      console.error(`Database Error: Failed to Update Member: ${JSON.stringify(err)}`);
+      return {
+        message: 'Database Error: Failed to Update Member.',
+      };
+    }
+
+    // Revalidate the cache for the members page and redirect the user.
+    revalidatePath(MEMBER_NOTES_PAGE_PATH(memberId));
+    redirect(MEMBER_NOTES_PAGE_PATH(memberId));
+  }
+  return {} as State;
+}
+
 const dateForEndOfYearSpan = (d: Date): Date => {
   const givenDate = d.getDate();
   const givenMonth = d.getMonth();
-  console.log(`given: ${givenMonth} ${givenDate}`)
 
   /* y = givenYear + 1 */
-
   const nextYear = d.getFullYear() + 1;
+
   let nextDate;
   let nextMonth;
 
@@ -712,7 +840,7 @@ export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) 
     // IMember _id is a mongo ObejctId
     const id = m._id.toString();
 
-    // hydrate remittances before creating the from data
+    // hydrate remittances before creating the form data
     const remittances = m.remittances ?
       (
         m.remittances.map((r: IRemittance) => (
@@ -727,6 +855,22 @@ export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) 
       ) :
       (
         Array<Remittance>()
+      );
+
+    // hydrate remittances before creating the form data
+    const notes = m.notes ?
+      (
+        m.notes.map((r: INotes) => (
+          {
+            // id is a mongo ObjectId
+            id: r.id.toString(),
+            date: r.date,
+            note: r.note,
+          }
+        ))
+      ) :
+      (
+        Array<Note>()
       );
 
     const mform = {
@@ -747,6 +891,7 @@ export const sTransformIMemberDocumentToMemberForm = async (m: IMemberDocument) 
       validEmail: m.validEmail ? m.validEmail : "",
       validPostMail: m.validPostMail ? m.validPostMail : "",
       remittances: remittances,
+      notes: notes,
       lastUpdated: m.lastUpdated ? m.lastUpdated : undefined,
     } satisfies MemberForm;
     return JSON.stringify(mform);

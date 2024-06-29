@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react';
 // import { fetchMembersPageCount } from '@/Server/actions/MemberDocumentActions';
-import { Table } from '@/app//ui/remittance/table';
+import { Table } from '@/app//ui/note/table';
 // import { Pagination } from '@/app//ui/members/pagination';
-import { CreateMemberDocument, CreateMemberRemittance } from '@/app/ui/members/buttons';
+import { CreateMemberDocument, CreateMemberRemittance, CreateMemberNote } from '@/app/ui/members/buttons';
 import Search from '@/app/ui/search';
 import { headers } from 'next/headers';
 import { usePathname } from 'next/navigation';
@@ -31,7 +31,7 @@ export default async function Page({
   if (pageParams && pageParams.memberId) {
     memberId = pageParams.memberId;
   } else {
-    const rePat = /(^.*members\/)([\d\w]+)(\/remittances)/;
+    const rePat = /(^.*members\/)([\d\w]+)(\/notes)/;
     const headerList = headers();
     const pathName = headerList.get("x-current-path") ?? '';
     const patMatches = rePat.exec(pathName);
@@ -45,11 +45,11 @@ export default async function Page({
     return (
       <div className="home-page w-full px-8 grow flex flex-col mt-2">
         <hr className='w-full my-3 h-1 border-stone-400' />
-        <h2>Remittances:</h2>
+        <h2>Notes:</h2>
         <div className="mt-4 flex items-center justify-between gap-2 md:mt-8">
           <div className='invisible'><Search placeholder="Search members..." /></div>
           <div className='flex justify-between gap-2'>
-            <CreateMemberRemittance id={memberId ?? ''} />
+            <CreateMemberNote id={memberId ?? ''} />
             <Link
               href={`/dashboard/members`}
               className="flex h-10 items-center rounded-lg bg-gray-100 px-4 text-sm font-medium text-gray-600 transition-colors hover:bg-gray-200"

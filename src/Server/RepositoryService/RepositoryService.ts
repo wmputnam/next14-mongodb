@@ -192,8 +192,6 @@ export class Repository<T> implements IRepository<T> {
       const filter = { _id: new ObjectId(documentId) };
       const setter = { $set: updateDocument }
 
-      console.log(`updateDocument filter: ${JSON.stringify(filter)}`);
-      console.log(`updateDocument setter: ${JSON.stringify(setter)}`);
       // Access the database and the collection
       const collection = client.db().collection(this.collection);
 
@@ -201,7 +199,6 @@ export class Repository<T> implements IRepository<T> {
         .updateOne(
           filter, setter)
         ;
-      console.log(`updateDocument result: ${JSON.stringify(result)}`);
       return result as unknown as T;
     } catch (error: unknown) {
       // Catch and log any connection errors
